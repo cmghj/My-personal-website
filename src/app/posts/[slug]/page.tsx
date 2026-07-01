@@ -18,7 +18,10 @@ export async function generateMetadata(props: PageProps<"/posts/[slug]">) {
   const post = await getPost(slug);
   if (!post) return { title: "未找到" };
 
-  const image = post.cover || "/og-default.png";
+  // 分享卡片的图：只有真实照片(jpg/png/webp)才用作分享图；
+  // SVG 等格式很多平台（微信/Twitter）不渲染，改用默认 PNG 分享图。
+  const isRaster = /\.(png|jpe?g|webp)$/i.test(post.cover);
+  const image = isRaster ? post.cover : "/og-default.png";
   return {
     title: post.title,
     description: post.excerpt,
