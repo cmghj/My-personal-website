@@ -92,7 +92,7 @@ npm install
 npm run dev
 ```
 
-然后用浏览器打开 **http://localhost:3000**。
+然后用浏览器打开 [http://localhost:3000](http://localhost:3000)。
 
 - 本地预览只有你自己能看到，改动实时生效。
 - 关闭：在终端窗口按 `Ctrl + C`。
