@@ -2,7 +2,7 @@
 
 一个记录生活、照片与影像的个人小站。用 **Next.js + React** 搭建，写文章只需要新建一个 Markdown 文件，`git push` 后自动上线。
 
-- 🌐 线上地址：https://my-personal-website-7x01iazik-cmghjwei.vercel.app
+- 🌐 线上地址：https://liaopan.vercel.app
 - 📦 代码仓库：https://github.com/cmghj/My-personal-website
 
 核心就三件事：**写内容、放照片、放视频**。
@@ -19,21 +19,24 @@ site/
 │     └─ walk.md
 │
 ├─ public/                🖼️ 静态资源
-│  └─ photos/             照片和视频都放这里（相册页会自动展示）
+│  ├─ photos/             照片和视频都放这里（相册页会自动展示）
+│  └─ og-default.png      默认「分享卡片」图（文章没配真实照片封面时用它）
 │
 ├─ src/
 │  ├─ app/                🧩 网站的所有页面
-│  │  ├─ layout.tsx       全站外框：页头导航 + 页脚
+│  │  ├─ layout.tsx       全站外框：页头导航 + 页脚（含联系方式）
 │  │  ├─ page.tsx         首页：简介 + 记录列表
 │  │  ├─ globals.css      配色 + 字体 + 文章排版
+│  │  ├─ icon.png         网站标签图标（换头像就替换它）· apple-icon.png 手机主屏图标
+│  │  ├─ not-found.tsx    404「走丢了」页面
 │  │  ├─ about/page.tsx   「关于」页
-│  │  ├─ gallery/page.tsx 「相册」页
+│  │  ├─ gallery/page.tsx 「相册」页（大图翻页 + 视频播放）
 │  │  ├─ tags/            「标签」页（总览 + 每个标签）
-│  │  └─ posts/[slug]/    文章详情页（自动套用到每篇记录）
+│  │  └─ posts/[slug]/    文章详情页（封面 + 上/下篇 + 分享卡片）
 │  │
 │  ├─ components/         🔧 可复用的界面组件（导航、列表、相册）
 │  └─ lib/
-│     ├─ posts.ts         读取文章 + 标签
+│     ├─ posts.ts         读取文章 + 标签 + 相邻文章
 │     └─ media.ts         读取相册里的照片/视频
 │
 ├─ next.config.ts         Next.js 配置
@@ -54,8 +57,8 @@ site/
 ---
 title: 标题写这里
 date: "2026-07-01"
-excerpt: 一句话摘要，会显示在首页列表
-cover: ""
+excerpt: 一句话摘要，会显示在首页列表，也是分享卡片的描述
+cover: "/photos/封面图.jpg"
 tags: [生活, 随笔]
 ---
 
@@ -99,6 +102,20 @@ tags: [生活, 随笔]
 
 - 每篇文章下方会显示它的标签
 - 「标签」页汇总所有标签，点一下能看该标签下的全部记录
+
+---
+
+## 🖼️ 封面图 & 分享卡片
+
+- 在信息头写 `cover: "/photos/xxx.jpg"`，这张图会显示在**首页卡片**和**文章顶部**。
+- 把链接分享到社交平台时，会自动生成**预览卡片**：
+  - 标题 = `title`，描述 = `excerpt`
+  - 图片 = 封面 `cover`（需是**真实照片** `.jpg/.png/.webp`）；若没填或是 SVG，则用默认图 `public/og-default.png`
+- ⚠️ 微信抓取海外域名（`.vercel.app`）不稳定，卡片可能不显示，属正常现象；Twitter/Telegram 等海外平台正常。
+
+## 🎨 换网站图标（浏览器标签上的小图）
+
+替换 `src/app/icon.png`（建议正方形，256×256 左右）即可；手机主屏图标是 `src/app/apple-icon.png`。`git push` 后生效（浏览器有缓存，可能需强制刷新 Ctrl+F5）。
 
 ---
 
