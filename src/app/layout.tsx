@@ -51,7 +51,7 @@ export default function RootLayout({
             {/* 联系方式：把下面链接换成你自己的，或删掉不需要的 */}
             <div className="flex gap-5">
               <a
-                href="mailto:你的邮箱@example.com"
+                href="mailto:3178005264@qq.com"
                 className="hover:text-accent transition-colors"
               >
                 邮箱
