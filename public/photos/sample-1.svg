@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6b26b"/>
+      <stop offset="0.55" stop-color="#e07a5f"/>
+      <stop offset="1" stop-color="#6d4c41"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="600" fill="url(#g1)"/>
+  <circle cx="620" cy="150" r="70" fill="#fff3e0" opacity="0.9"/>
+  <path d="M0 470 L200 400 L360 460 L560 380 L800 450 L800 600 L0 600 Z" fill="#3b2a22" opacity="0.55"/>
+  <path d="M0 520 L260 470 L480 520 L800 480 L800 600 L0 600 Z" fill="#2a1c16" opacity="0.7"/>
+  <text x="400" y="560" text-anchor="middle" font-family="Georgia, serif" font-size="26" fill="#fbe9d0" opacity="0.85">傍晚的晚霞</text>
+</svg>

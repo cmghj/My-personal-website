@@ -23,23 +23,33 @@ export default async function PostPage(props: PageProps<"/posts/[slug]">) {
     <article>
       <Link
         href="/"
-        className="text-sm text-stone-400 hover:text-stone-700 transition-colors"
+        className="text-sm text-muted hover:text-ink transition-colors"
       >
         ← 返回首页
       </Link>
 
       <header className="mt-6 mb-8">
-        <time className="text-sm text-stone-400">
-          {formatDate(post.date)}
-        </time>
-        <h1 className="mt-2 text-3xl font-bold tracking-tight">{post.title}</h1>
+        <time className="text-sm text-muted">{formatDate(post.date)}</time>
+        <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight">
+          {post.title}
+        </h1>
+        {post.tags.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {post.tags.map((tag) => (
+              <Link
+                key={tag}
+                href={`/tags/${encodeURIComponent(tag)}`}
+                className="tag-chip"
+              >
+                {tag}
+              </Link>
+            ))}
+          </div>
+        )}
       </header>
 
-      {/* Markdown 正文转成的 HTML */}
-      <div
-        className="prose"
-        dangerouslySetInnerHTML={{ __html: post.html }}
-      />
+      {/* Markdown 正文转成的 HTML（照片、视频都在这里） */}
+      <div className="prose" dangerouslySetInnerHTML={{ __html: post.html }} />
     </article>
   );
 }
