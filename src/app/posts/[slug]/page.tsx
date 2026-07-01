@@ -1,23 +1,48 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllPosts, getPost, formatDate } from "@/lib/posts";
+import {
+  getAllPosts,
+  getPost,
+  getAdjacentPosts,
+  formatDate,
+} from "@/lib/posts";
 
 // 构建时为每篇记录预生成静态页面（速度快、利于分享）
 export function generateStaticParams() {
   return getAllPosts().map((post) => ({ slug: post.slug }));
 }
 
-// 每篇记录的浏览器标签标题
+// 浏览器标签标题 + 分享预览卡片（Open Graph）
 export async function generateMetadata(props: PageProps<"/posts/[slug]">) {
   const { slug } = await props.params;
   const post = await getPost(slug);
-  return { title: post ? post.title : "未找到" };
+  if (!post) return { title: "未找到" };
+
+  const image = post.cover || "/og-default.png";
+  return {
+    title: post.title,
+    description: post.excerpt,
+    openGraph: {
+      title: post.title,
+      description: post.excerpt,
+      type: "article",
+      images: [image],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.excerpt,
+      images: [image],
+    },
+  };
 }
 
 export default async function PostPage(props: PageProps<"/posts/[slug]">) {
   const { slug } = await props.params;
   const post = await getPost(slug);
   if (!post) notFound();
+
+  const { newer, older } = getAdjacentPosts(slug);
 
   return (
     <article>
@@ -46,10 +71,46 @@ export default async function PostPage(props: PageProps<"/posts/[slug]">) {
             ))}
           </div>
         )}
+        {post.cover && (
+          <div className="mt-6 overflow-hidden rounded-2xl">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={post.cover}
+              alt={post.title}
+              className="aspect-[16/9] w-full object-cover"
+            />
+          </div>
+        )}
       </header>
 
       {/* Markdown 正文转成的 HTML（照片、视频都在这里） */}
       <div className="prose" dangerouslySetInnerHTML={{ __html: post.html }} />
+
+      {/* 上一篇 / 下一篇 */}
+      {(newer || older) && (
+        <nav className="mt-14 grid grid-cols-2 gap-4 border-t border-line pt-8">
+          <div>
+            {older && (
+              <Link href={`/posts/${older.slug}`} className="group block">
+                <div className="text-xs text-muted">← 更早的一篇</div>
+                <div className="mt-1 font-serif font-medium group-hover:text-accent transition-colors">
+                  {older.title}
+                </div>
+              </Link>
+            )}
+          </div>
+          <div className="text-right">
+            {newer && (
+              <Link href={`/posts/${newer.slug}`} className="group block">
+                <div className="text-xs text-muted">更新的一篇 →</div>
+                <div className="mt-1 font-serif font-medium group-hover:text-accent transition-colors">
+                  {newer.title}
+                </div>
+              </Link>
+            )}
+          </div>
+        </nav>
+      )}
     </article>
   );
 }

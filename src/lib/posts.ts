@@ -87,6 +87,20 @@ export function getPostsByTag(tag: string): PostMeta[] {
   return getAllPosts().filter((p) => p.tags.includes(tag));
 }
 
+// 相邻文章：newer = 时间上更新的一篇，older = 更早的一篇
+export function getAdjacentPosts(slug: string): {
+  newer: PostMeta | null;
+  older: PostMeta | null;
+} {
+  const posts = getAllPosts(); // 已按新→旧排序
+  const i = posts.findIndex((p) => p.slug === slug);
+  if (i === -1) return { newer: null, older: null };
+  return {
+    newer: i > 0 ? posts[i - 1] : null,
+    older: i < posts.length - 1 ? posts[i + 1] : null,
+  };
+}
+
 // 把 "2026-06-20" 显示成 "2026年6月20日"
 export function formatDate(date: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(date);

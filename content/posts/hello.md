@@ -2,7 +2,7 @@
 title: 第一篇记录：为什么开始写这个站
 date: "2026-06-20"
 excerpt: 想有个属于自己的角落，记录生活里那些容易忘掉的小事和当时的想法。
-cover: ""
+cover: "/photos/sample-3.svg"
 tags: [随笔, 生活]
 ---
 

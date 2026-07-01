@@ -2,7 +2,7 @@
 title: 傍晚的一次散步
 date: "2026-06-28"
 excerpt: 没带目的地出门，反而看见了平时会错过的光。
-cover: ""
+cover: "/photos/sample-1.svg"
 tags: [生活, 摄影]
 ---
 
