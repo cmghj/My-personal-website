@@ -5,11 +5,12 @@ import {
   getPost,
   getAdjacentPosts,
   formatDate,
+  formatEntryKind,
 } from "@/lib/posts";
 
 // 构建时为每篇记录预生成静态页面（速度快、利于分享）
-export function generateStaticParams() {
-  return getAllPosts().map((post) => ({ slug: post.slug }));
+export async function generateStaticParams() {
+  return (await getAllPosts()).map((post) => ({ slug: post.slug }));
 }
 
 // 浏览器标签标题 + 分享预览卡片（Open Graph）
@@ -45,10 +46,10 @@ export default async function PostPage(props: PageProps<"/posts/[slug]">) {
   const post = await getPost(slug);
   if (!post) notFound();
 
-  const { newer, older } = getAdjacentPosts(slug);
+  const { newer, older } = await getAdjacentPosts(slug);
 
   return (
-    <article>
+    <article className="mx-auto max-w-3xl">
       <Link
         href="/"
         className="text-sm text-muted hover:text-ink transition-colors"
@@ -56,11 +57,17 @@ export default async function PostPage(props: PageProps<"/posts/[slug]">) {
         ← 返回首页
       </Link>
 
-      <header className="mt-6 mb-8">
-        <time className="text-sm text-muted">{formatDate(post.date)}</time>
-        <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight">
+      <header className="mb-10 mt-8">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-xs font-semibold tracking-[0.1em] text-accent">
+          <span>{formatEntryKind(post.kind)}</span>
+          <time>{formatDate(post.date)}</time>
+          {post.location && <span>⌖ {post.location}</span>}
+          {post.mood && <span>心情 · {post.mood}</span>}
+        </div>
+        <h1 className="mt-3 font-serif text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
           {post.title}
         </h1>
+        {post.excerpt && <p className="mt-5 text-lg leading-8 text-muted">{post.excerpt}</p>}
         {post.tags.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
             {post.tags.map((tag) => (
@@ -75,7 +82,7 @@ export default async function PostPage(props: PageProps<"/posts/[slug]">) {
           </div>
         )}
         {post.cover && (
-          <div className="mt-6 overflow-hidden rounded-2xl">
+          <div className="mt-8 overflow-hidden rounded-2xl border border-line shadow-[0_18px_55px_rgba(59,50,44,0.08)]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={post.cover}
@@ -87,7 +94,7 @@ export default async function PostPage(props: PageProps<"/posts/[slug]">) {
       </header>
 
       {/* Markdown 正文转成的 HTML（照片、视频都在这里） */}
-      <div className="prose" dangerouslySetInnerHTML={{ __html: post.html }} />
+      <div className="prose border-t border-line pt-8" dangerouslySetInnerHTML={{ __html: post.html }} />
 
       {/* 上一篇 / 下一篇 */}
       {(newer || older) && (

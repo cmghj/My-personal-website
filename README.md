@@ -1,176 +1,69 @@
-# 我的记录 · 个人网站
+# 我的记录
 
-一个记录生活、照片与影像的个人小站。用 **Next.js + React** 搭建，写文章只需要新建一个 Markdown 文件，`git push` 后自动上线。
+一个公开浏览、单人管理的个人生活档案网站。
 
-- 🌐 线上地址：https://liaopan.vercel.app
-- 📦 代码仓库：https://github.com/cmghj/My-personal-website
+- 访客直接浏览首页、文章、相册和标签，不需要账号。
+- 只有站主进入 `/studio` 登录，写记录、上传媒体和修改网站设置。
+- Vercel 运行网页，Supabase 保存账号、文字数据、照片与视频。
+- 你上传的照片和视频统一保存在 Supabase Storage；仓库不作为个人媒体库。
+- 仓库中的图标与默认分享图是网站界面素材，不是个人记录附件。
 
-核心就三件事：**写内容、放照片、放视频**。
+## 日常使用
 
----
+打开 `/studio` 后可以：
 
-## 📁 文件结构
+- 在「记录」中新建、修改、发布、归档或移入回收站；
+- 在编辑页插入图片/视频、设置封面，并查看或恢复历史版本；
+- 在「媒体库」上传文件，填写拍摄日期、地点和说明；
+- 在「网站设置」修改网站名称、简介和首页开场白。
 
-```
-site/
-├─ content/
-│  └─ posts/              📝 我的记录（每篇一个 Markdown 文件）
-│     ├─ hello.md
-│     └─ walk.md
-│
-├─ public/                🖼️ 静态资源
-│  ├─ photos/             照片和视频都放这里（相册页会自动展示）
-│  └─ og-default.png      默认「分享卡片」图（文章没配真实照片封面时用它）
-│
-├─ src/
-│  ├─ app/                🧩 网站的所有页面
-│  │  ├─ layout.tsx       全站外框：页头导航 + 页脚（含联系方式）
-│  │  ├─ page.tsx         首页：简介 + 记录列表
-│  │  ├─ globals.css      配色 + 字体 + 文章排版
-│  │  ├─ icon.png         网站标签图标（换头像就替换它）· apple-icon.png 手机主屏图标
-│  │  ├─ not-found.tsx    404「走丢了」页面
-│  │  ├─ about/page.tsx   「关于」页
-│  │  ├─ gallery/page.tsx 「相册」页（大图翻页 + 视频播放）
-│  │  ├─ tags/            「标签」页（总览 + 每个标签）
-│  │  └─ posts/[slug]/    文章详情页（封面 + 上/下篇 + 分享卡片）
-│  │
-│  ├─ components/         🔧 可复用的界面组件（导航、列表、相册）
-│  └─ lib/
-│     ├─ posts.ts         读取文章 + 标签 + 相邻文章
-│     └─ media.ts         读取相册里的照片/视频
-│
-├─ next.config.ts         Next.js 配置
-├─ package.json           项目依赖清单
-└─ （其余为工具配置，一般不用动）
-```
+媒体库上传的文件默认进入公开相册；文章编辑器内上传的文件默认只作为文章素材，不出现在相册列表。两种文件都位于公开的 `public-media` 存储桶，所以“文章素材”不是私人加密文件。
 
-> 日常最常碰的只有两个地方：**`content/posts/`（写文章）** 和 **`public/photos/`（放照片、视频）**。
+## 本地运行
 
----
-
-## ✍️ 怎么发一篇新记录
-
-1. 在 `content/posts/` 里新建一个 `.md` 文件，文件名用英文/数字（如 `2026-07-01.md`），它会成为网址的一部分。
-2. 文件开头照抄下面这段「信息头」，再往下写正文：
-
-```markdown
----
-title: 标题写这里
-date: "2026-07-01"
-excerpt: 一句话摘要，会显示在首页列表，也是分享卡片的描述
-cover: "/photos/封面图.jpg"
-tags: [生活, 随笔]
----
-
-正文用 Markdown 写，空一行表示分段。
-
-## 小标题
-
-- 列表项一
-- 列表项二
-
-> 这是一段引用。
-```
-
-3. 保存即可。本地预览刷新就能看到；推送到 GitHub 后网站会自动更新。
-
----
-
-## 📷 放照片、🎬 放视频（写法完全一样）
-
-1. 把照片或视频放进 `public/photos/`，例如：
-   - 照片 `public/photos/sunset.jpg`
-   - 视频 `public/photos/walk.mp4`（推荐 mp4 格式，兼容性最好）
-2. 在文章正文里，用同一种写法插入（路径从 `/photos/` 开头，**不要写 public**）：
-
-```markdown
-![傍晚的天空](/photos/sunset.jpg)
-
-![散步的片段](/photos/walk.mp4)
-```
-
-- 结尾是 `.jpg/.png` 等 → 显示为**图片**
-- 结尾是 `.mp4/.webm` 等 → 自动变成**可播放的视频**
-
-> 另外：**凡是放进 `public/photos/` 的照片和视频，都会自动出现在「相册」页**，按网格展示，点照片可放大查看。
-
----
-
-## 🏷️ 标签
-
-在文章信息头里写 `tags: [生活, 随笔]` 即可。之后：
-
-- 每篇文章下方会显示它的标签
-- 「标签」页汇总所有标签，点一下能看该标签下的全部记录
-
----
-
-## 🖼️ 封面图 & 分享卡片
-
-- 在信息头写 `cover: "/photos/xxx.jpg"`，这张图会显示在**首页卡片**和**文章顶部**。
-- 把链接分享到社交平台时，会自动生成**预览卡片**：
-  - 标题 = `title`，描述 = `excerpt`
-  - 图片 = 封面 `cover`（需是**真实照片** `.jpg/.png/.webp`）；若没填或是 SVG，则用默认图 `public/og-default.png`
-- ⚠️ 微信抓取海外域名（`.vercel.app`）不稳定，卡片可能不显示，属正常现象；Twitter/Telegram 等海外平台正常。
-
-## 🎨 换网站图标（浏览器标签上的小图）
-
-替换 `src/app/icon.png`（建议正方形，256×256 左右）即可；手机主屏图标是 `src/app/apple-icon.png`。`git push` 后生效（浏览器有缓存，可能需强制刷新 Ctrl+F5）。
-
----
-
-## 💻 本地预览（在自己电脑上边改边看）
+复制 `.env.example` 为 `.env.local`，填入 Supabase 项目 URL 与 Publishable Key，然后运行：
 
 ```bash
-# 进入项目目录（如果你已经在 site 文件夹里就跳过这步）
-cd site
-
-# 首次使用先安装依赖（只需一次）
 npm install
-
-# 启动本地预览
 npm run dev
 ```
 
-然后用浏览器打开 [http://localhost:3000](http://localhost:3000)。
+浏览器打开 [http://localhost:3000](http://localhost:3000)。
 
-- 本地预览只有你自己能看到，改动实时生效。
-- 关闭：在终端窗口按 `Ctrl + C`。
+## 部署
 
----
+GitHub 仓库连接 Vercel 后，在 Vercel 项目中配置同样的两个环境变量：
 
-## 🚀 更新线上网站
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 
-本项目托管在 **Vercel**，已和 GitHub 仓库绑定。只要把改动推送到 GitHub，Vercel 会自动重新构建并上线：
+推送到 GitHub 后，Vercel 会自动构建和发布。
 
-```bash
-git add -A
-git commit -m "新增一篇记录"
-git push
+## 数据库
+
+- 当前 Supabase 项目已经完成数据库结构升级，不需要再次运行迁移。
+- 以后如果创建一个全新的空 Supabase 项目，只运行 `supabase/migrations/202609160001_initial_archive.sql`。
+- `202609170001_finalize_archive.sql` 是当前数据库从旧结构升级而来的正式历史记录，只在另一个仍处于旧结构的项目中运行一次。
+- 详细字段、数据流和后台查看位置见 `docs/database-structure.md`。
+
+迁移脚本是正式的数据库结构历史，不是临时开发文件。当前项目已经完成迁移，不需要再操作 SQL Editor。
+
+## 项目结构
+
+```text
+src/app/                 页面与工作台
+src/components/          公共界面组件
+src/lib/                 Supabase、记录、媒体与设置读取逻辑
+public/og-default.png    默认分享卡片图片
+supabase/migrations/     数据库初始结构与现有项目升级脚本
+docs/database-structure.md
 ```
 
-推送后不用做任何额外操作，线上网站会自动更新。
+旧演示图片已清理，项目不再保留本地 Markdown 内容副本或个人照片/视频副本；Supabase 是文章与媒体信息的唯一数据源，避免出现“改了文件却没改网页”或两份数据互相冲突。
 
----
+## 技术栈
 
-## 🛠️ 技术栈
-
-| 用途 | 采用 |
-|------|------|
-| 框架 | Next.js 16（App Router）+ React 19 |
-| 样式 | Tailwind CSS v4（暖色文艺配色）|
-| 文章 | Markdown（`gray-matter` 解析信息头，`marked` 转 HTML，图片/视频通用写法）|
-| 托管 | Vercel（免费、自动 HTTPS、推送即部署）|
-
----
-
-## ❓ 常见疑问
-
-- **为什么线上网站不用我一直开着电脑？**
-  部署时 Vercel 已把每个页面预先生成成固定的 HTML 文件，由 Vercel 的服务器 24 小时对外提供。你的电脑只在本地预览时才需要运行。
-
-- **本地页面左下角那个小按钮是什么？**
-  是 Next.js 的开发者调试工具，只在 `npm run dev` 时出现，线上网站和访客都看不到，不用管它。
-
-- **`public/photos/` 里的 sample-*.svg 是什么？**
-  是我放的几张示例「照片」，用来演示相册效果。你可以随时删掉，换成自己的照片。
+- Next.js 16 / React 19 / TypeScript
+- Tailwind CSS 4
+- Supabase PostgreSQL / Auth / Storage
+- Vercel

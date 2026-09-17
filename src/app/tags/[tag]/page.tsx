@@ -3,8 +3,8 @@ import { getAllTags, getPostsByTag } from "@/lib/posts";
 import PostList from "@/components/PostList";
 
 // 为每个标签预生成一个页面
-export function generateStaticParams() {
-  return getAllTags().map(({ tag }) => ({ tag }));
+export async function generateStaticParams() {
+  return (await getAllTags()).map(({ tag }) => ({ tag }));
 }
 
 export async function generateMetadata(props: PageProps<"/tags/[tag]">) {
@@ -15,10 +15,10 @@ export async function generateMetadata(props: PageProps<"/tags/[tag]">) {
 export default async function TagPage(props: PageProps<"/tags/[tag]">) {
   const { tag } = await props.params;
   const name = decodeURIComponent(tag);
-  const posts = getPostsByTag(name);
+  const posts = await getPostsByTag(name);
 
   return (
-    <div>
+    <div className="mx-auto max-w-4xl">
       <Link
         href="/tags"
         className="text-sm text-muted hover:text-ink transition-colors"
@@ -26,10 +26,11 @@ export default async function TagPage(props: PageProps<"/tags/[tag]">) {
         ← 所有标签
       </Link>
 
-      <h1 className="mt-6 mb-8 font-serif text-3xl font-bold tracking-tight">
-        <span className="text-muted font-normal text-2xl">标签 · </span>
-        {name}
-      </h1>
+      <header className="mb-8 mt-6 border-b border-line pb-7">
+        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">Tagged stories</div>
+        <h1 className="mt-2 font-serif text-4xl font-bold tracking-tight">{name}</h1>
+        <p className="mt-2 text-sm text-muted">共 {posts.length} 篇相关记录</p>
+      </header>
 
       <PostList posts={posts} />
     </div>

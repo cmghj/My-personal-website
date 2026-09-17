@@ -2,22 +2,25 @@ export const metadata = { title: "关于" };
 
 export default function AboutPage() {
   return (
-    <div className="prose">
-      <h1>关于我</h1>
-      <p>
-        这里可以写你自己的介绍——你是谁、喜欢什么、为什么开始记录。
-        改这段文字，只需要编辑 <code>src/app/about/page.tsx</code> 这个文件。
-      </p>
-      <p>
-        我把这个小站当作一本慢慢写的日记：放一些照片，存一段影像，
-        写下当时的心情。不追求完美，只想真实地留住生活。
-      </p>
-      <h2>可以聊聊</h2>
-      <ul>
-        <li>生活里让我开心的小事</li>
-        <li>最近在读 / 在看 / 在想的东西</li>
-        <li>联系我：把你的邮箱或社交账号放这里</li>
-      </ul>
+    <div className="mx-auto max-w-3xl">
+      <header className="mb-10 border-b border-line pb-8">
+        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">About this place</div>
+        <h1 className="mt-2 font-serif text-4xl font-bold tracking-tight">关于这个小站</h1>
+      </header>
+      <div className="prose">
+        <p>这是一个属于自己的生活档案，也是一处不急着更新、不追赶热闹的个人空间。</p>
+        <p>
+          我会把照片、影像和当时的想法放在这里。很多瞬间发生时看起来普通，过一段时间再回头，却常常成为最值得珍藏的部分。
+        </p>
+        <blockquote>记录不是为了证明生活多么精彩，只是想让一些真实发生过的日子不被忘记。</blockquote>
+        <h2>这里会留下些什么</h2>
+        <ul>
+          <li>日常里值得记住的小事</li>
+          <li>路上遇见的光、风景和声音</li>
+          <li>最近在读、在看、在想的东西</li>
+          <li>写给未来自己的只言片语</li>
+        </ul>
+      </div>
     </div>
   );
 }

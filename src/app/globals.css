@@ -7,8 +7,10 @@
   --color-ink: #3b322c; /* 正文·深褐 */
   --color-muted: #94867a; /* 次要文字·暖灰 */
   --color-line: #ece3d7; /* 分隔线·浅米 */
+  --color-line-strong: #d9cdbf;
   --color-accent: #b45309; /* 点缀·暖橘赤褐 */
   --color-accent-strong: #8a3d0a; /* 点缀·加深（悬停）*/
+  --color-studio: #f3efe9;
 
   --font-serif: Georgia, "Times New Roman", "Source Han Serif SC",
     "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
@@ -18,6 +20,26 @@
 body {
   font-family: "PingFang SC", "Microsoft YaHei", system-ui, -apple-system,
     sans-serif;
+  background-image:
+    radial-gradient(circle at 15% 0%, rgba(180, 83, 9, 0.035), transparent 28rem),
+    linear-gradient(180deg, #fcfaf6 0%, var(--color-paper) 30rem);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
 }
 
 .font-serif {
@@ -34,9 +56,10 @@ body {
   display: inline-block;
   font-size: 0.75rem;
   line-height: 1;
-  padding: 0.3rem 0.6rem;
+  padding: 0.38rem 0.68rem;
   border-radius: 9999px;
-  background: #f4ebe0;
+  border: 1px solid #eadccd;
+  background: #f8f0e7;
   color: #8a7059;
   transition: all 0.15s ease;
   white-space: nowrap;
@@ -48,24 +71,34 @@ a.tag-chip:hover {
 
 /* ===== 相册网格 ===== */
 .photo-grid {
-  columns: 2;
-  column-gap: 0.75rem;
+  columns: 1;
+  column-gap: 1rem;
 }
 @media (min-width: 640px) {
+  .photo-grid {
+    columns: 2;
+  }
+}
+@media (min-width: 900px) {
   .photo-grid {
     columns: 3;
   }
 }
 .photo-grid figure {
   break-inside: avoid;
-  margin: 0 0 0.75rem;
+  margin: 0 0 1rem;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: 0.9rem;
+  background: var(--color-card);
+  box-shadow: 0 8px 24px rgba(59, 50, 44, 0.04);
 }
 .photo-grid img,
 .photo-grid video {
   width: 100%;
   height: auto;
   display: block;
-  border-radius: 0.6rem;
+  border-radius: 0.9rem;
   transition: transform 0.2s ease, filter 0.2s ease;
 }
 .photo-grid img {
@@ -166,7 +199,8 @@ a.tag-chip:hover {
 
 /* ===== Markdown 文章正文（.prose）===== */
 .prose {
-  line-height: 1.9;
+  font-size: 1.02rem;
+  line-height: 2;
   color: #4a3f37;
 }
 .prose h1,
@@ -191,7 +225,7 @@ a.tag-chip:hover {
   margin: 1.5rem 0 0.5rem;
 }
 .prose p {
-  margin: 1rem 0;
+  margin: 1.2rem 0;
 }
 .prose ul {
   list-style: disc;
@@ -235,8 +269,126 @@ a.tag-chip:hover {
   border-radius: 0.35rem;
   font-size: 0.9em;
 }
+.prose pre {
+  overflow-x: auto;
+  border: 1px solid var(--color-line);
+  border-radius: 0.8rem;
+  background: #f2eae0;
+  padding: 1rem;
+}
+.prose pre code {
+  padding: 0;
+}
 .prose hr {
   border: none;
   border-top: 1px solid var(--color-line);
   margin: 2rem 0;
+}
+
+/* ===== 站主管理工作台 ===== */
+.studio-wide {
+  width: 100%;
+  max-width: 74rem;
+  margin-inline: auto;
+}
+
+.studio-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #594c42;
+}
+
+.studio-input {
+  width: 100%;
+  border: 1px solid var(--color-line);
+  border-radius: 0.75rem;
+  background: #fff;
+  padding: 0.78rem 0.9rem;
+  color: var(--color-ink);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.studio-input:focus {
+  border-color: #c98d58;
+  box-shadow: 0 0 0 3px rgba(180, 83, 9, 0.1);
+}
+
+.studio-primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--color-accent);
+  padding: 0.75rem 1.15rem;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.studio-primary-button:hover {
+  background: var(--color-accent-strong);
+}
+
+.studio-primary-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.studio-stat {
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  background: rgba(255, 254, 251, 0.85);
+  padding: 1.35rem;
+  box-shadow: 0 10px 35px rgba(59, 50, 44, 0.035);
+}
+
+.studio-secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 0.75rem;
+  background: var(--color-card);
+  padding: 0.7rem 1rem;
+  color: var(--color-ink);
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.studio-secondary-button:hover {
+  border-color: #c6b5a3;
+  background: #fff;
+}
+
+.studio-card {
+  border: 1px solid var(--color-line);
+  border-radius: 1rem;
+  background: rgba(255, 254, 251, 0.9);
+  box-shadow: 0 12px 40px rgba(59, 50, 44, 0.04);
+}
+
+.studio-nav-link {
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.studio-nav-link:hover {
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--color-ink);
+}
+
+@media (max-width: 639px) {
+  .studio-input {
+    font-size: 1rem;
+  }
 }

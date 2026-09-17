@@ -10,15 +10,17 @@ const links = [
   { href: "/about", label: "关于" },
 ];
 
-export default function Nav() {
+export default function Nav({ siteTitle }: { siteTitle: string }) {
   const pathname = usePathname();
 
   return (
-    <nav className="mx-auto max-w-2xl px-6 h-16 flex items-center justify-between">
-      <Link href="/" className="font-serif text-lg font-bold tracking-tight">
-        我的记录
+    <nav className="mx-auto flex max-w-5xl flex-col gap-3 px-5 py-3 sm:h-[4.5rem] sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-0">
+      <Link href="/" className="group flex items-center gap-3" aria-label={`${siteTitle}，返回首页`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/icon.png" alt="" className="h-9 w-9 rounded-full object-cover ring-1 ring-line transition-transform group-hover:-rotate-3 group-hover:scale-105" />
+        <span className="font-serif text-lg font-bold tracking-tight">{siteTitle}</span>
       </Link>
-      <div className="flex gap-4 sm:gap-6 text-sm">
+      <div className="flex w-full min-w-0 items-center justify-between gap-1 text-sm sm:w-auto sm:justify-start sm:gap-2">
         {links.map((link) => {
           const active =
             link.href === "/"
@@ -30,9 +32,10 @@ export default function Nav() {
               href={link.href}
               className={
                 active
-                  ? "text-accent font-medium"
-                  : "text-muted hover:text-ink transition-colors"
+                  ? "rounded-full bg-card px-3 py-2 font-medium text-ink shadow-[inset_0_0_0_1px_var(--color-line)]"
+                  : "rounded-full px-3 py-2 text-muted transition-colors hover:bg-card/70 hover:text-ink"
               }
+              aria-current={active ? "page" : undefined}
             >
               {link.label}
             </Link>
