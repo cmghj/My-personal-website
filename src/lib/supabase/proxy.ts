@@ -5,6 +5,22 @@ import { getSupabaseConfig, hasSupabaseConfig } from "./config";
 export async function updateSession(request: NextRequest) {
   if (!hasSupabaseConfig()) return NextResponse.next({ request });
 
+  const pathname = request.nextUrl.pathname;
+  const isLoginPage = pathname === "/studio/login";
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some(({ name }) => name.startsWith("sb-") && name.includes("-auth-token"));
+
+  // 明确没有登录 cookie 时无需请求 Supabase：登录页直接显示，其余后台页直接跳转。
+  if (!hasAuthCookie) {
+    if (isLoginPage) return NextResponse.next({ request });
+
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/studio/login";
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
   let response = NextResponse.next({ request });
   const { url, publishableKey } = getSupabaseConfig();
 
@@ -28,9 +44,6 @@ export async function updateSession(request: NextRequest) {
 
   const { data: claimData } = await supabase.auth.getClaims();
   const claims = claimData?.claims ?? null;
-
-  const pathname = request.nextUrl.pathname;
-  const isLoginPage = pathname === "/studio/login";
 
   if (!claims && !isLoginPage) {
     const loginUrl = request.nextUrl.clone();
