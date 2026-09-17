@@ -10,6 +10,8 @@ import {
 } from "react";
 import { useFormStatus } from "react-dom";
 import { createEntry, moveEntryToTrash, updateEntry } from "@/app/studio/actions";
+import FormSubmitButton from "@/app/studio/FormSubmitButton";
+import SupabaseImage from "@/components/SupabaseImage";
 import { createClient } from "@/lib/supabase/client";
 
 const MAX_MEDIA_BYTES = 100 * 1024 * 1024;
@@ -188,7 +190,11 @@ export default function EntryForm({
       uploadedPath = `${user.id}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
       const { error: uploadError } = await supabase.storage
         .from("public-media")
-        .upload(uploadedPath, file, { contentType: file.type, upsert: false });
+        .upload(uploadedPath, file, {
+          contentType: file.type,
+          cacheControl: "31536000",
+          upsert: false,
+        });
       if (uploadError) throw new Error(`上传失败：${uploadError.message}`);
 
       const { data: publicFile } = supabase.storage.from("public-media").getPublicUrl(uploadedPath);
@@ -506,17 +512,16 @@ export default function EntryForm({
             <section className="rounded-2xl border border-red-200 bg-red-50/70 p-5">
               <h2 className="font-medium text-red-900">危险操作</h2>
               <p className="mt-1 text-xs leading-5 text-red-700">记录会先进入回收站，之后仍可恢复。</p>
-              <button
-                type="submit"
+              <FormSubmitButton
+                idleLabel="移入回收站"
+                pendingLabel="正在移动…"
                 formAction={moveEntryToTrash}
                 formNoValidate
                 onClick={(event) => {
                   if (!window.confirm("要把这条记录移入回收站吗？公开页面将不再显示它。")) event.preventDefault();
                 }}
                 className="mt-3 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-100"
-              >
-                移入回收站
-              </button>
+              />
             </section>
           )}
         </aside>
@@ -601,12 +606,17 @@ export default function EntryForm({
                         onClick={() => chooseMedia(item, pickerMode)}
                         className="group overflow-hidden rounded-xl border border-line bg-white text-left transition hover:border-amber-600 hover:shadow-md"
                       >
-                        <span className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-stone-100">
+                        <span className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-stone-100">
                           {item.kind === "video" ? (
                             <video src={`${item.url}#t=0.1`} muted preload="metadata" className="h-full w-full object-cover" />
                           ) : (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={item.url} alt="" className="h-full w-full object-cover transition-transform group-hover:scale-[1.03]" />
+                            <SupabaseImage
+                              src={item.url}
+                              alt=""
+                              fill
+                              sizes="(min-width: 1024px) 13rem, (min-width: 640px) 28vw, 45vw"
+                              className="object-cover transition-transform group-hover:scale-[1.03]"
+                            />
                           )}
                         </span>
                         <span className="block truncate px-3 py-2 text-xs font-medium" title={item.name}>

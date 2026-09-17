@@ -1,8 +1,10 @@
 import CopyUrlButton from "./CopyUrlButton";
 import DeleteMediaButton from "./DeleteMediaButton";
 import MediaUploader from "./MediaUploader";
+import SupabaseImage from "@/components/SupabaseImage";
 import { setMediaPurpose, updateMediaDetails } from "@/app/studio/actions";
 import { requireOwner } from "@/lib/studio";
+import FormSubmitButton from "../FormSubmitButton";
 
 export const metadata = { title: "照片与视频" };
 
@@ -45,12 +47,17 @@ export default async function StudioMediaPage() {
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {media.map((item) => (
             <article key={item.id} className="studio-card group overflow-hidden">
-              <div className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-stone-100">
+              <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-stone-100">
                 {item.kind === "video" ? (
                   <video src={`${item.public_url}#t=0.1`} controls preload="metadata" className="h-full w-full object-cover" />
                 ) : (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.public_url} alt={item.original_name} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" />
+                  <SupabaseImage
+                    src={item.public_url}
+                    alt={item.original_name}
+                    fill
+                    sizes="(min-width: 1024px) 23rem, (min-width: 640px) 45vw, 90vw"
+                    className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                  />
                 )}
               </div>
               <div className="p-4">
@@ -72,12 +79,11 @@ export default async function StudioMediaPage() {
                       name="purpose"
                       value={item.purpose === "gallery" ? "article" : "gallery"}
                     />
-                    <button
-                      type="submit"
+                    <FormSubmitButton
+                      idleLabel={item.purpose === "gallery" ? "移出相册" : "加入相册"}
+                      pendingLabel="处理中…"
                       className="rounded-lg px-2.5 py-1.5 text-xs text-accent transition-colors hover:bg-amber-50 hover:text-accent-strong"
-                    >
-                      {item.purpose === "gallery" ? "移出相册" : "加入相册"}
-                    </button>
+                    />
                   </form>
                   <DeleteMediaButton id={item.id} name={item.original_name} />
                 </div>
@@ -118,9 +124,11 @@ export default async function StudioMediaPage() {
                         placeholder="这一刻发生了什么？"
                       />
                     </div>
-                    <button type="submit" className="studio-secondary-button w-full justify-center !py-2">
-                      保存拍摄信息
-                    </button>
+                    <FormSubmitButton
+                      idleLabel="保存拍摄信息"
+                      pendingLabel="正在保存…"
+                      className="studio-secondary-button w-full justify-center !py-2"
+                    />
                   </form>
                 </details>
               </div>

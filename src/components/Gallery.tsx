@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Media } from "@/lib/media";
+import SupabaseImage from "@/components/SupabaseImage";
 
 type KindFilter = "all" | "image" | "video";
 
@@ -153,7 +154,7 @@ export default function Gallery({ media }: { media: Media[] }) {
                   <figure key={item.src} className={item.type === "video" ? "video-thumb" : undefined}>
                     <button
                       type="button"
-                      className="relative block w-full overflow-hidden"
+                      className="relative block aspect-[4/3] w-full overflow-hidden bg-stone-100"
                       onClick={() => setIndex(itemIndex)}
                       aria-label={item.type === "video" ? `播放 ${item.name}` : `查看大图：${item.name}`}
                     >
@@ -163,8 +164,13 @@ export default function Gallery({ media }: { media: Media[] }) {
                           <span className="play-badge" aria-hidden>▶</span>
                         </>
                       ) : (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={item.src} alt={item.caption || item.name} loading="lazy" />
+                        <SupabaseImage
+                          src={item.src}
+                          alt={item.caption || item.name}
+                          fill
+                          sizes="(min-width: 900px) 20rem, (min-width: 640px) 45vw, 90vw"
+                          className="object-cover"
+                        />
                       )}
                     </button>
                     <figcaption className="border-t border-line px-4 py-3">

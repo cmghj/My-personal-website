@@ -1,5 +1,6 @@
 import { updateSiteSettings } from "@/app/studio/actions";
 import { requireOwner } from "@/lib/studio";
+import FormSubmitButton from "../FormSubmitButton";
 
 export const metadata = { title: "网站设置" };
 
@@ -50,7 +51,11 @@ export default async function SiteSettingsPage({
           <p className="mt-1.5 text-xs text-muted">显示在首页大标题下面。</p>
         </div>
         <div className="flex justify-end border-t border-line pt-6">
-          <button type="submit" className="studio-primary-button">保存网站设置</button>
+          <FormSubmitButton
+            idleLabel="保存网站设置"
+            pendingLabel="正在保存…"
+            className="studio-primary-button"
+          />
         </div>
       </form>
     </div>

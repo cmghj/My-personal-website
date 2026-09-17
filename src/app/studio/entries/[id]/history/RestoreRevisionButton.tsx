@@ -1,6 +1,7 @@
 "use client";
 
 import { restoreEntryRevision } from "@/app/studio/actions";
+import FormSubmitButton from "../../../FormSubmitButton";
 
 export default function RestoreRevisionButton({
   entryId,
@@ -20,9 +21,11 @@ export default function RestoreRevisionButton({
     >
       <input type="hidden" name="entryId" value={entryId} />
       <input type="hidden" name="revisionId" value={revisionId} />
-      <button type="submit" className="studio-secondary-button !px-3 !py-2 text-xs">
-        恢复此版本
-      </button>
+      <FormSubmitButton
+        idleLabel="恢复此版本"
+        pendingLabel="正在恢复…"
+        className="studio-secondary-button !px-3 !py-2 text-xs"
+      />
     </form>
   );
 }

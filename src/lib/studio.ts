@@ -1,9 +1,11 @@
 import "server-only";
 
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export async function getStudioAccess() {
+// 同一个服务端请求里的布局和页面共享一次身份检查，避免重复访问 Supabase。
+export const getStudioAccess = cache(async function getStudioAccess() {
   const supabase = await createClient();
   const { data: claimData, error: claimsError } = await supabase.auth.getClaims();
   const claims = claimData?.claims ?? null;
@@ -27,7 +29,7 @@ export async function getStudioAccess() {
     isOwner: isOwner === true,
     setupError,
   };
-}
+});
 
 export async function requireOwner() {
   const access = await getStudioAccess();

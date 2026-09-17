@@ -49,7 +49,11 @@ export default function MediaUploader() {
         const path = `${user.id}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
         const { error: uploadError } = await supabase.storage
           .from("public-media")
-          .upload(path, file, { contentType: file.type, upsert: false });
+          .upload(path, file, {
+            contentType: file.type,
+            cacheControl: "31536000",
+            upsert: false,
+          });
         if (uploadError) throw new Error(`上传 ${file.name} 失败：${uploadError.message}`);
 
         const { data: publicFile } = supabase.storage.from("public-media").getPublicUrl(path);
