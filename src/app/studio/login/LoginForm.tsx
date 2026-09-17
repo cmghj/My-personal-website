@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginForm({ nextPath }: { nextPath: string }) {
+export default function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -31,7 +32,8 @@ export default function LoginForm({ nextPath }: { nextPath: string }) {
       return;
     }
 
-    const destination = nextPath.startsWith("/studio") ? nextPath : "/studio";
+    const requestedPath = searchParams.get("next") ?? "/studio";
+    const destination = requestedPath.startsWith("/studio") ? requestedPath : "/studio";
     router.replace(destination);
     router.refresh();
   }

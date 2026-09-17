@@ -6,5 +6,6 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/studio/:path*"],
+  // 登录页是公开静态入口；其余工作台页面才需要经过身份校验。
+  matcher: ["/studio", "/studio/((?!login(?:/|$)).*)"],
 };
