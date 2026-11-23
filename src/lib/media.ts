@@ -10,6 +10,21 @@ export type Media = {
   date: string | null;
 };
 
+export async function getLatestGalleryPhoto() {
+  const supabase = createPublicClient();
+  if (!supabase) return null;
+
+  const { data } = await supabase
+    .from("media")
+    .select("public_url,original_name,caption,captured_at,created_at")
+    .eq("purpose", "gallery")
+    .eq("kind", "image")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data;
+}
+
 export async function getGalleryMedia(): Promise<Media[]> {
   const supabase = createPublicClient();
   if (!supabase) return [];
@@ -17,6 +32,7 @@ export async function getGalleryMedia(): Promise<Media[]> {
   const { data, error } = await supabase
     .from("media")
     .select("public_url,kind,original_name,caption,location,captured_at,created_at")
+    .eq("purpose", "gallery")
     .in("kind", ["image", "video"])
     .order("created_at", { ascending: false });
 

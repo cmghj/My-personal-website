@@ -1,37 +1,49 @@
 import Link from "next/link";
+import TagArchive from "@/components/TagArchive";
+import { tagHref } from "@/lib/entry-format";
 import { getAllTags } from "@/lib/posts";
 
-export const metadata = { title: "标签" };
+export const dynamic = "force-dynamic";
 
-export default async function TagsPage() {
+async function selectedTag(props: PageProps<"/tags">) {
+  const { name } = await props.searchParams;
+  return typeof name === "string" ? name : undefined;
+}
+
+export async function generateMetadata(props: PageProps<"/tags">) {
+  const name = await selectedTag(props);
+  return { title: name ? `标签 · ${name}` : "标签" };
+}
+
+export default async function TagsPage(props: PageProps<"/tags">) {
+  const name = await selectedTag(props);
+  if (name) return <TagArchive name={name} />;
+
   const tags = await getAllTags();
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <header className="mb-10 border-b border-line pb-8">
-        <div className="text-xs font-semibold uppercase tracking-[0.2em] text-accent">Collections</div>
-        <h1 className="mt-2 font-serif text-4xl font-bold tracking-tight">标签</h1>
-        <p className="mt-3 text-muted">沿着不同的主题，重新遇见过去的记录。</p>
+    <section className="archive-index">
+      <header className="archive-heading">
+        <h1>标签</h1>
+        {tags.length > 0 && <p>{tags.length} 个主题</p>}
       </header>
-
-      {tags.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-line-strong p-12 text-center text-muted">
-          还没有可以浏览的标签。
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {tags.length ? (
+        <ul className="archive-topics">
           {tags.map(({ tag, count }) => (
-            <Link
-              key={tag}
-              href={`/tags/${encodeURIComponent(tag)}`}
-              className="group flex items-center justify-between rounded-2xl border border-line bg-card p-5 shadow-[0_10px_30px_rgba(59,50,44,0.03)] transition-all hover:-translate-y-0.5 hover:border-line-strong"
-            >
-              <span className="font-serif text-xl font-semibold transition-colors group-hover:text-accent">{tag}</span>
-              <span className="rounded-full bg-paper px-2.5 py-1 text-xs text-muted">{count} 篇</span>
-            </Link>
+            <li key={tag}>
+              <Link href={tagHref(tag)}>
+                <span>{tag}</span>
+                <small>{count} 篇 <i aria-hidden="true">→</i></small>
+              </Link>
+            </li>
           ))}
+        </ul>
+      ) : (
+        <div className="archive-empty">
+          <p>还没有公开记录使用标签。</p>
+          <Link href="/gallery">去看相册 <span aria-hidden="true">→</span></Link>
         </div>
       )}
-    </div>
+    </section>
   );
 }

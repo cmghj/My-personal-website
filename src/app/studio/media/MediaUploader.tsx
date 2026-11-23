@@ -1,85 +1,52 @@
 "use client";
 
 import { useRef, useState, type ChangeEvent, type DragEvent } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-
-const MAX_BYTES = 100 * 1024 * 1024;
-
-function safeFileName(name: string) {
-  const extension = name.includes(".") ? `.${name.split(".").pop()?.toLowerCase()}` : "";
-  const base = name
-    .replace(/\.[^.]+$/, "")
-    .normalize("NFKC")
-    .replace(/[^a-zA-Z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
-  return `${base || "media"}${extension}`;
-}
+import { openMediaUpload, prepareMediaUpload, uploadMedia, type MediaUpload } from "@/lib/upload-media";
+import { refreshGalleryAfterUpload } from "../actions";
 
 export default function MediaUploader() {
-  const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [dragging, setDragging] = useState(false);
 
-  async function uploadFiles(files: File[]) {
-    if (files.length === 0) return;
+  const pending = useRef<MediaUpload[]>([]);
+  const busy = useRef(false);
+  const [remaining, setRemaining] = useState(0);
 
+  async function uploadFiles(files?: File[]) {
+    if (busy.current || (files && (!files.length || pending.current.length))) return;
+    busy.current = true;
     setUploading(true);
     setMessage("");
     setError("");
-
+    let completed = 0;
     try {
-      const supabase = createClient();
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-      if (userError || !user) throw new Error("登录状态已失效，请刷新页面后重新登录。");
-
-      for (const file of files) {
-        if (!file.type.startsWith("image/") && !file.type.startsWith("video/")) {
-          throw new Error(`${file.name} 不是支持的照片或视频。`);
-        }
-        if (file.size > MAX_BYTES) throw new Error(`${file.name} 超过了 100MB。`);
-
-        const path = `${user.id}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
-        const { error: uploadError } = await supabase.storage
-          .from("public-media")
-          .upload(path, file, {
-            contentType: file.type,
-            cacheControl: "31536000",
-            upsert: false,
-          });
-        if (uploadError) throw new Error(`上传 ${file.name} 失败：${uploadError.message}`);
-
-        const { data: publicFile } = supabase.storage.from("public-media").getPublicUrl(path);
-        const { error: insertError } = await supabase.from("media").insert({
-          kind: file.type.startsWith("video/") ? "video" : "image",
-          storage_path: path,
-          public_url: publicFile.publicUrl,
-          original_name: file.name,
-          mime_type: file.type,
-          size_bytes: file.size,
-          purpose: "gallery",
-          owner_id: user.id,
-        });
-
-        if (insertError) {
-          await supabase.storage.from("public-media").remove([path]);
-          throw new Error(`登记 ${file.name} 失败：${insertError.message}`);
+      if (files) pending.current = files.map(prepareMediaUpload);
+      const total = pending.current.length;
+      const session = await openMediaUpload();
+      while (pending.current.length) {
+        setMessage(`正在上传第 ${completed + 1} / ${total} 个文件…`);
+        await uploadMedia(session, pending.current[0], "gallery");
+        pending.current.shift();
+        completed++;
+      }
+      setMessage(`已上传 ${completed} 个文件，可在公开相册查看。`);
+    } catch (failure) {
+      setMessage(completed ? `已上传 ${completed} 个文件。` : "");
+      setError(failure instanceof Error ? failure.message : "上传失败，请重试。");
+    } finally {
+      if (completed) {
+        try {
+          await refreshGalleryAfterUpload();
+        } catch {
+          setMessage(`已上传 ${completed} 个文件。页面刷新失败，请稍后刷新。`);
         }
       }
-
-      setMessage(`已上传 ${files.length} 个文件，它们现在会显示在公开相册中。`);
-      router.refresh();
-    } catch (uploadFailure) {
-      setError(uploadFailure instanceof Error ? uploadFailure.message : "上传失败，请重试。");
-    } finally {
+      setRemaining(pending.current.length);
       setUploading(false);
+      busy.current = false;
       if (inputRef.current) inputRef.current.value = "";
     }
   }
@@ -102,9 +69,8 @@ export default function MediaUploader() {
       }}
       onDragLeave={() => setDragging(false)}
       onDrop={dropFiles}
-      className={`rounded-2xl border-2 border-dashed p-8 text-center transition-colors ${
-        dragging ? "border-accent bg-amber-50" : "border-line-strong bg-card/70"
-      }`}
+      className="studio-dropzone"
+      data-dragging={dragging || undefined}
     >
       <input
         ref={inputRef}
@@ -112,21 +78,24 @@ export default function MediaUploader() {
         multiple
         accept="image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm"
         onChange={uploadFromInput}
-        disabled={uploading}
+        disabled={uploading || remaining > 0}
         className="sr-only"
         id="media-upload"
       />
-      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-100 text-2xl text-accent">↑</div>
-      <div className="font-serif text-lg font-semibold">拖放照片或视频到这里</div>
-      <p className="mt-1 text-sm text-muted">或者从电脑中选择文件</p>
-      <label htmlFor="media-upload" className="studio-primary-button mt-5">
-        {uploading ? "正在上传，请稍候…" : "选择文件"}
-      </label>
-      <p className="mt-3 text-xs leading-5 text-muted">
-        支持 JPG、PNG、WebP、GIF、AVIF、MP4、WebM；单个文件不超过 100MB。上传后默认公开。
-      </p>
-      {message && <p className="mt-4 text-sm text-emerald-700">✓ {message}</p>}
-      {error && <p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}
+      <div>
+        <h2 className="font-serif text-lg font-semibold">上传到公开相册</h2>
+        <p className="mt-1 text-xs leading-5 text-muted">可拖入照片或视频，单个文件最大 100 MB。</p>
+      </div>
+      {remaining === 0 ? <label htmlFor="media-upload" className="studio-primary-button">
+        {uploading ? "正在上传…" : "选择文件"}
+      </label> : (
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="studio-primary-button" disabled={uploading} onClick={() => void uploadFiles()}>重试剩余 {remaining} 个</button>
+          <button type="button" className="studio-secondary-button" disabled={uploading} onClick={() => { pending.current = []; setRemaining(0); setError(""); setMessage(""); }}>取消剩余上传</button>
+        </div>
+      )}
+      {message && <p role="status" className="text-sm text-emerald-700">✓ {message}</p>}
+      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
     </div>
   );
 }

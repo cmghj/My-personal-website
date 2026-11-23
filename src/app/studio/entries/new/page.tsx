@@ -26,10 +26,12 @@ export default async function NewEntryPage() {
       .select("id,kind,public_url,original_name")
       .order("created_at", { ascending: false }),
   ]);
-  const suffix = sameDayEntries?.length ? `-${sameDayEntries.length + 1}` : "";
+  const existingSlugs = new Set(sameDayEntries?.map((row) => row.slug));
+  let slug = baseSlug;
+  for (let suffix = 2; existingSlugs.has(slug); suffix++) slug = `${baseSlug}-${suffix}`;
   const entry: EditableEntry = {
     title: "",
-    slug: `${baseSlug}${suffix}`,
+    slug,
     kind: "note",
     occurredAt: today,
     excerpt: "",
@@ -49,14 +51,5 @@ export default async function NewEntryPage() {
     name: item.original_name,
   }));
 
-  return (
-    <div>
-      <div className="mb-8">
-        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">New entry</div>
-        <h1 className="mt-1 font-serif text-3xl font-bold">新建记录</h1>
-        <p className="mt-2 text-sm text-muted">先安心写下来，默认保存为草稿，不会出现在公开网站。</p>
-      </div>
-      <EntryForm entry={entry} media={media} />
-    </div>
-  );
+  return <EntryForm entry={entry} media={media} />;
 }

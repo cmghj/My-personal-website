@@ -16,7 +16,7 @@ export const defaultSiteSettings: SiteSettings = {
 };
 
 export const getSiteSettings = cache(async (): Promise<SiteSettings> => {
-  const supabase = createPublicClient();
+  const supabase = createPublicClient(60);
   if (!supabase) return defaultSiteSettings;
 
   const { data, error } = await supabase

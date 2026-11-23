@@ -2,56 +2,34 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import Nav from "@/components/Nav";
+import Nav from "./Nav";
 
-export default function SiteShell({
-  children,
-  siteTitle,
-  siteDescription,
-}: {
+export default function SiteShell({ children, siteTitle, siteDescription }: {
   children: React.ReactNode;
   siteTitle: string;
   siteDescription: string;
 }) {
   const pathname = usePathname();
-  const isStudio = pathname.startsWith("/studio");
-
-  if (isStudio) {
-    return <main className="min-h-screen bg-studio px-4 py-5 sm:px-6 sm:py-8">{children}</main>;
+  if (pathname.startsWith("/studio")) {
+    return <main className="min-h-screen bg-studio px-4 py-4 sm:px-8 sm:py-7">{children}</main>;
   }
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-line/80 bg-paper/90 backdrop-blur-xl">
-        <Nav siteTitle={siteTitle} />
-      </header>
-
-      <main className="mx-auto min-w-0 w-full max-w-5xl flex-1 px-5 py-10 sm:px-8 sm:py-16">
-        {children}
-      </main>
-
-      <footer className="mt-auto border-t border-line/80 bg-card/50">
-        <div className="mx-auto flex max-w-5xl flex-col gap-5 px-5 py-8 text-sm text-muted sm:flex-row sm:items-center sm:justify-between sm:px-8">
+      <a className="skip-content" href="#main-content">跳到正文</a>
+      <header className="site-header"><Nav siteTitle={siteTitle} /></header>
+      <main id="main-content" tabIndex={-1} className="site-width site-main">{children}</main>
+      <footer className="site-footer">
+        <div className="site-width footer-inner">
           <div>
-            <div className="font-serif text-base font-semibold text-ink">{siteTitle}</div>
-            <div className="mt-1 text-xs">{siteDescription}</div>
+            <p className="footer-name">{siteTitle}</p>
+            <p className="footer-description">{siteDescription}</p>
           </div>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <a href="mailto:3178005264@qq.com" className="transition-colors hover:text-accent">
-              邮箱
-            </a>
-            <a
-              href="https://github.com/cmghj/My-personal-website"
-              target="_blank"
-              rel="noreferrer"
-              className="transition-colors hover:text-accent"
-            >
-              GitHub
-            </a>
-            <Link href="/about" className="transition-colors hover:text-accent">
-              关于
-            </Link>
-            <span className="text-line-strong">© {new Date().getFullYear()}</span>
+          <div className="footer-links">
+            <Link href="/about">关于</Link>
+            <a href="mailto:3178005264@qq.com">邮箱</a>
+            <a href="https://github.com/cmghj/My-personal-website" target="_blank" rel="noreferrer">GitHub</a>
+            <span>© {new Date().getFullYear()}</span>
           </div>
         </div>
       </footer>

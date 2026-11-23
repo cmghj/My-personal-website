@@ -77,19 +77,10 @@ export default async function EditEntryPage({
   const notice = query.created
     ? "记录已创建。"
     : query.restored
-      ? "历史版本已恢复；恢复前的内容也已自动保存为一个新版本。"
+      ? "历史版本已恢复，恢复前的内容已存入历史版本。"
     : query.saved
       ? "修改已保存。"
       : undefined;
 
-  return (
-    <div>
-      <div className="mb-8">
-        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Edit entry</div>
-        <h1 className="mt-1 font-serif text-3xl font-bold">编辑记录</h1>
-        <p className="mt-2 text-sm text-muted">每次修改正文时，数据库也会自动留下一个历史版本。</p>
-      </div>
-      <EntryForm entry={entry} media={media} notice={notice} />
-    </div>
-  );
+  return <EntryForm key={data.id} entry={entry} media={media} notice={notice} />;
 }

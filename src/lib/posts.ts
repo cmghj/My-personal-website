@@ -1,21 +1,10 @@
 import "server-only";
 
-import { marked, type Tokens } from "marked";
+import { cache } from "react";
+import { renderMarkdown } from "@/lib/markdown";
 import { createPublicClient } from "@/lib/supabase/public";
 
-const VIDEO_EXT = /\.(mp4|webm|mov|m4v)$/i;
-marked.use({
-  renderer: {
-    image(token: Tokens.Image) {
-      const href = token.href ?? "";
-      const alt = token.text ?? "";
-      if (VIDEO_EXT.test(href)) {
-        return `<video src="${href}" controls playsinline preload="metadata"></video>`;
-      }
-      return `<img src="${href}" alt="${alt}" loading="lazy" />`;
-    },
-  },
-});
+export { formatDate, formatEntryKind } from "@/lib/entry-format";
 
 export type PostMeta = {
   slug: string;
@@ -74,15 +63,13 @@ function databaseMeta(entry: DatabaseEntry): PostMeta {
   };
 }
 
-async function getDatabasePosts(): Promise<PostMeta[]> {
+async function listPublicEntries<Columns extends string>(columns: Columns) {
   const supabase = createPublicClient();
   if (!supabase) return [];
 
   const { data, error } = await supabase
     .from("entries")
-    .select(
-      "slug,title,occurred_at,excerpt,cover_url,kind,location,mood,entry_tags(tags(name))",
-    )
+    .select(columns)
     .eq("status", "published")
     .eq("visibility", "public")
     .is("deleted_at", null)
@@ -93,46 +80,42 @@ async function getDatabasePosts(): Promise<PostMeta[]> {
     throw new Error(`读取公开记录失败：${error.message}`);
   }
 
-  return (data as unknown as DatabaseEntry[]).map(databaseMeta);
+  return data;
 }
 
-export async function getAllPosts(): Promise<PostMeta[]> {
-  return getDatabasePosts();
-}
+export const getAllPosts = cache(async (): Promise<PostMeta[]> => {
+  const entries = await listPublicEntries(
+    "slug,title,occurred_at,excerpt,cover_url,kind,location,mood,entry_tags(tags(name))",
+  );
+  return (entries as unknown as DatabaseEntry[]).map(databaseMeta);
+});
 
-export async function getPost(slug: string): Promise<Post | null> {
+export const getPost = cache(async (slug: string): Promise<Post | null> => {
   const supabase = createPublicClient();
+  if (!supabase) return null;
 
-  if (supabase) {
-    const { data, error } = await supabase
-      .from("entries")
-      .select(
-        "slug,title,occurred_at,excerpt,cover_url,kind,location,mood,content_markdown,entry_tags(tags(name))",
-      )
-      .eq("slug", slug)
-      .eq("status", "published")
-      .in("visibility", ["public", "unlisted"])
-      .is("deleted_at", null)
-      .maybeSingle();
+  const { data, error } = await supabase
+    .from("entries")
+    .select(
+      "slug,title,occurred_at,excerpt,cover_url,kind,location,mood,content_markdown,entry_tags(tags(name))",
+    )
+    .eq("slug", slug)
+    .eq("status", "published")
+    .in("visibility", ["public", "unlisted"])
+    .is("deleted_at", null)
+    .maybeSingle();
 
-    if (!error && data) {
-      const entry = data as unknown as DatabaseEntry;
-      return {
-        ...databaseMeta(entry),
-        html: await marked.parse(entry.content_markdown ?? ""),
-      };
-    }
-
-    if (error) throw new Error(`读取记录失败：${error.message}`);
-  }
-
-  return null;
-}
+  if (error) throw new Error(`读取记录失败：${error.message}`);
+  if (!data) return null;
+  const entry = data as unknown as DatabaseEntry;
+  return { ...databaseMeta(entry), html: renderMarkdown(entry.content_markdown ?? "") };
+});
 
 export async function getAllTags(): Promise<{ tag: string; count: number }[]> {
   const counts = new Map<string, number>();
-  for (const post of await getAllPosts()) {
-    for (const tag of post.tags) {
+  const entries = await listPublicEntries("entry_tags(tags(name))");
+  for (const entry of entries) {
+    for (const tag of relationTags(entry.entry_tags)) {
       counts.set(tag, (counts.get(tag) ?? 0) + 1);
     }
   }
@@ -146,30 +129,14 @@ export async function getPostsByTag(tag: string): Promise<PostMeta[]> {
 }
 
 export async function getAdjacentPosts(slug: string): Promise<{
-  newer: PostMeta | null;
-  older: PostMeta | null;
+  newer: Pick<PostMeta, "slug" | "title"> | null;
+  older: Pick<PostMeta, "slug" | "title"> | null;
 }> {
-  const posts = await getAllPosts();
+  const posts = await listPublicEntries("slug,title");
   const index = posts.findIndex((post) => post.slug === slug);
   if (index === -1) return { newer: null, older: null };
   return {
     newer: index > 0 ? posts[index - 1] : null,
     older: index < posts.length - 1 ? posts[index + 1] : null,
   };
-}
-
-export function formatDate(date: string): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(date);
-  if (!match) return date;
-  return `${match[1]}年${Number(match[2])}月${Number(match[3])}日`;
-}
-
-export function formatEntryKind(kind: string): string {
-  return {
-    article: "文章",
-    note: "随手记",
-    photo_story: "照片故事",
-    video: "视频记录",
-    year_review: "年度回顾",
-  }[kind] ?? "记录";
 }

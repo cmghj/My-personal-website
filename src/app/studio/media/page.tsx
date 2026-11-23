@@ -25,15 +25,9 @@ export default async function StudioMediaPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Media library</div>
-        <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-          <h1 className="font-serif text-3xl font-bold">媒体库</h1>
-          <span className="text-sm text-muted">{media.length} 个文件</span>
-        </div>
-        <p className="mt-2 text-sm text-muted">
-          这里统一保存原始文件。通过本页上传的文件会进入公开相册；在文章编辑器里直接上传的文件只作为文章素材，不会自动进入相册。
-        </p>
+      <div className="studio-page-heading">
+        <h1>媒体库</h1>
+        <span className="text-sm text-muted">{media.length} 个文件</span>
       </div>
 
       <MediaUploader />
@@ -82,7 +76,7 @@ export default async function StudioMediaPage() {
                     <FormSubmitButton
                       idleLabel={item.purpose === "gallery" ? "移出相册" : "加入相册"}
                       pendingLabel="处理中…"
-                      className="rounded-lg px-2.5 py-1.5 text-xs text-accent transition-colors hover:bg-amber-50 hover:text-accent-strong"
+                      className="rounded-lg px-2.5 py-2 text-xs text-accent transition-colors hover:bg-paper hover:text-accent-strong"
                     />
                   </form>
                   <DeleteMediaButton id={item.id} name={item.original_name} />

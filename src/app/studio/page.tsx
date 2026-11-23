@@ -4,108 +4,82 @@ import { requireOwner } from "@/lib/studio";
 
 export const metadata = { title: "工作台" };
 
-function getEntryMode(entry: { status: string; visibility: string }) {
-  if (entry.status === "draft") {
-    return { label: "草稿", className: "bg-amber-50 text-amber-700" };
-  }
-  if (entry.status === "archived") {
-    return { label: "已归档", className: "bg-stone-100 text-stone-600" };
-  }
-  if (entry.visibility === "unlisted") {
-    return { label: "仅链接可见", className: "bg-sky-50 text-sky-700" };
-  }
-  if (entry.visibility !== "public") {
-    return { label: "待整理", className: "bg-amber-50 text-amber-700" };
-  }
-  return { label: "公开", className: "bg-emerald-50 text-emerald-700" };
+const modes = {
+  draft: "草稿",
+  public: "公开",
+  unlisted: "仅链接",
+  archived: "归档",
+  private: "待整理",
+};
+
+function getMode(entry: { status: string; visibility: string }): keyof typeof modes {
+  if (entry.status === "draft" || entry.status === "archived") return entry.status;
+  if (entry.visibility === "unlisted" || entry.visibility === "public") return entry.visibility;
+  return "private";
 }
 
-export default async function StudioPage() {
-  const { supabase } = await requireOwner();
-  const { data: allEntries, error } = await supabase
+export default async function StudioPage({ searchParams }: {
+  searchParams: Promise<{ view?: string }>;
+}) {
+  const [{ supabase }, { view }] = await Promise.all([requireOwner(), searchParams]);
+  const { data, error } = await supabase
     .from("entries")
-    .select("id,slug,title,occurred_at,status,visibility,updated_at,deleted_at")
+    .select("id,title,occurred_at,status,visibility,updated_at,deleted_at")
     .order("updated_at", { ascending: false });
-
   if (error) throw new Error(`读取记录失败：${error.message}`);
 
-  const entries = allEntries.filter((entry) => entry.deleted_at === null);
-  const deletedCount = Math.max(allEntries.length - entries.length, 0);
-  const publicCount = entries.filter(
-    (entry) => entry.status === "published" && entry.visibility === "public",
-  ).length;
-  const draftCount = entries.filter((entry) => entry.status === "draft").length;
+  const entries = data.filter((entry) => !entry.deleted_at);
+  const counts = { all: entries.length, draft: 0, public: 0, unlisted: 0, archived: 0, private: 0 };
+  for (const entry of entries) counts[getMode(entry)]++;
+  const filters = Object.entries({ all: "全部", ...modes })
+    .filter(([key]) => key !== "private" || counts.private > 0);
+  const selected = filters.some(([key]) => key === view) ? view : "all";
+  const visibleEntries = entries.filter((entry) => selected === "all" || getMode(entry) === selected);
+  const deletedCount = data.length - entries.length;
 
   return (
     <div>
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Overview</div>
-          <h1 className="mt-1 font-serif text-3xl font-bold">我的记录</h1>
-          <p className="mt-2 text-sm text-muted">写作、整理，再决定哪些内容与世界分享。</p>
-        </div>
+      <div className="studio-page-heading">
+        <h1>我的记录</h1>
         <Link href="/studio/entries/new" className="studio-primary-button">
-          ＋ 新建记录
+          <span aria-hidden="true">＋</span> 新建记录
         </Link>
       </div>
+      <nav className="studio-filters" aria-label="筛选记录">
+        {filters.map(([key, label]) => (
+          <Link key={key} href={key === "all" ? "/studio" : `/studio?view=${key}`}
+            aria-current={selected === key ? "page" : undefined} scroll={false}>
+            {label}<span>{counts[key as keyof typeof counts]}</span>
+          </Link>
+        ))}
+      </nav>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="studio-stat">
-          <div className="text-sm text-muted">全部记录</div>
-          <div className="mt-2 font-serif text-3xl font-bold">{entries.length}</div>
-        </div>
-        <div className="studio-stat">
-          <div className="text-sm text-muted">公开记录</div>
-          <div className="mt-2 font-serif text-3xl font-bold">{publicCount}</div>
-        </div>
-        <div className="studio-stat">
-          <div className="text-sm text-muted">草稿</div>
-          <div className="mt-2 font-serif text-3xl font-bold">{draftCount}</div>
-        </div>
-        <Link href="/studio/trash" className="studio-stat block transition-colors hover:border-line-strong">
-          <div className="text-sm text-muted">回收站</div>
-          <div className="mt-2 font-serif text-3xl font-bold">{deletedCount}</div>
-        </Link>
+      <div className="studio-list-heading">
+        <h2>最近更新</h2>
+        {deletedCount > 0 && <Link href="/studio/trash">回收站（{deletedCount}）</Link>}
       </div>
-
-      <div className="mt-10 flex items-end justify-between">
-        <div>
-          <h2 className="font-serif text-2xl font-bold">最近更新</h2>
-          <p className="mt-1 text-sm text-muted">点击任意一条继续编辑。</p>
-        </div>
-      </div>
-
-      {entries.length === 0 ? (
-        <div className="mt-6 rounded-xl border border-dashed border-line p-10 text-center text-muted">
-          还没有数据库记录。点击“新建记录”写下第一篇。
-        </div>
-      ) : (
-        <div className="studio-card mt-6 overflow-hidden">
-          {entries.map((entry, index) => {
-            const mode = getEntryMode(entry);
+      {visibleEntries.length ? (
+        <ul className="studio-records">
+          {visibleEntries.map((entry) => {
+            const mode = getMode(entry);
             return (
-              <Link
-                key={entry.id}
-                href={`/studio/entries/${entry.id}`}
-                className={`flex flex-col gap-3 p-5 transition-colors hover:bg-paper/80 sm:flex-row sm:items-center sm:justify-between ${
-                  index > 0 ? "border-t border-line" : ""
-                }`}
-              >
-                <div>
-                  <div className="font-serif text-lg font-semibold leading-snug">{entry.title}</div>
-                  <div className="mt-1.5 text-xs text-muted">
-                    {formatDate(entry.occurred_at)} · {entry.slug}
+              <li key={entry.id}>
+                <Link href={`/studio/entries/${entry.id}`} className="studio-record">
+                  <div>
+                    <span className="studio-record-title">{entry.title}</span>
+                    <time dateTime={entry.occurred_at}>{formatDate(entry.occurred_at)}</time>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <span className={`rounded-full px-2.5 py-1 ${mode.className}`}>
-                    {mode.label}
-                  </span>
-                  <span className="text-accent">编辑 →</span>
-                </div>
-              </Link>
+                  <span className="studio-record-mode" data-mode={mode}>{modes[mode]}</span>
+                  <span className="studio-record-arrow" aria-hidden="true">→</span>
+                </Link>
+              </li>
             );
           })}
+        </ul>
+      ) : (
+        <div className="studio-empty">
+          <h3>{entries.length ? "这个分类里还没有记录" : "还没有记录"}</h3>
+          {entries.length ? <Link href="/studio">查看全部记录 →</Link> : <p>点击「新建记录」开始写第一篇。</p>}
         </div>
       )}
     </div>

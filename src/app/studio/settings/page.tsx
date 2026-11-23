@@ -20,16 +20,12 @@ export default async function SiteSettingsPage({
 
   return (
     <div className="mx-auto max-w-3xl">
-      <div className="mb-8">
-        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Site settings</div>
-        <h1 className="mt-1 font-serif text-3xl font-bold">网站设置</h1>
-        <p className="mt-2 text-sm leading-6 text-muted">
-          这里修改的是整座网站共用的文字，保存后首页、导航、页脚和浏览器标题会一起更新。
-        </p>
+      <div className="studio-page-heading">
+        <h1>网站设置</h1>
       </div>
 
       {query.saved && (
-        <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800">
+        <div role="status" className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800">
           ✓ 网站设置已保存。
         </div>
       )}
@@ -48,7 +44,7 @@ export default async function SiteSettingsPage({
         <div>
           <label htmlFor="homeIntro" className="studio-label">首页开场白</label>
           <textarea id="homeIntro" name="homeIntro" required maxLength={300} rows={5} defaultValue={data.home_intro} className="studio-input resize-y" />
-          <p className="mt-1.5 text-xs text-muted">显示在首页大标题下面。</p>
+          <p className="mt-1.5 text-xs text-muted">显示在首页开头，向访客介绍这个小站。</p>
         </div>
         <div className="flex justify-end border-t border-line pt-6">
           <FormSubmitButton

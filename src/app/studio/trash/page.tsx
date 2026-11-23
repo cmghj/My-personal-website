@@ -16,16 +16,14 @@ export default async function TrashPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <div className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">Trash</div>
-        <h1 className="mt-1 font-serif text-3xl font-bold">回收站</h1>
-        <p className="mt-2 text-sm text-muted">移入回收站的记录不会在公开网站出现，可以恢复或永久删除。</p>
+      <div className="studio-page-heading">
+        <h1>回收站</h1>
+        <span className="text-sm text-muted">{entries.length} 条记录</span>
       </div>
 
       {entries.length === 0 ? (
         <div className="studio-card p-12 text-center">
           <div className="font-serif text-xl font-semibold">回收站是空的</div>
-          <p className="mt-2 text-sm text-muted">删除的记录会先来到这里。</p>
         </div>
       ) : (
         <div className="studio-card overflow-hidden">

@@ -20,7 +20,9 @@ const entrySchema = z.object({
   coverUrl: z.string().trim().max(2000),
   location: z.string().trim().max(200),
   mood: z.string().trim().max(100),
-  tags: z.string().trim().max(500),
+  tags: z.string().trim().max(500)
+    .transform((raw) => [...new Set(raw.split(/[,，]/).map((name) => name.trim()).filter(Boolean))])
+    .pipe(z.array(z.string().max(50, "单个标签最多 50 个字符。"))),
   status: z.enum(["draft", "published", "archived"]),
   visibility: z.enum(["public", "unlisted"]),
   isPinned: z.boolean(),
@@ -49,7 +51,7 @@ const revisionSnapshotSchema = z.object({
   tags: z.array(z.string()).default([]),
 });
 
-export type EntryActionState = { error: string };
+export type EntryActionState = { error: string; createdId?: string };
 
 function value(formData: FormData, name: string) {
   return String(formData.get(name) ?? "");
@@ -73,40 +75,76 @@ function parseEntry(formData: FormData) {
   });
 }
 
+function refreshEntryPages() {
+  revalidatePath("/");
+  revalidatePath("/posts/[slug]", "page");
+  revalidatePath("/tags");
+  revalidatePath("/tags/[tag]", "page");
+  revalidatePath("/studio", "layout");
+}
+
+function refreshMediaPages() {
+  revalidatePath("/");
+  revalidatePath("/gallery");
+  revalidatePath("/studio/media");
+}
+
+export async function refreshGalleryAfterUpload() {
+  await requireOwner();
+  refreshMediaPages();
+}
+
 async function replaceEntryTags(
   supabase: Awaited<ReturnType<typeof requireOwner>>["supabase"],
   entryId: string,
-  rawTags: string,
+  names: string[],
 ): Promise<string | null> {
-  const names = [...new Set(rawTags.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean))];
-
-  const { error: deleteError } = await supabase
-    .from("entry_tags")
-    .delete()
-    .eq("entry_id", entryId);
-  if (deleteError) return `更新标签失败：${deleteError.message}`;
-
-  for (const name of names) {
-    const { data: tag, error: tagError } = await supabase
-      .from("tags")
-      .upsert({ name }, { onConflict: "name" })
-      .select("id")
-      .single();
-    if (tagError) return `保存标签失败：${tagError.message}`;
-
-    const { error: relationError } = await supabase
-      .from("entry_tags")
-      .insert({ entry_id: entryId, tag_id: tag.id });
-    if (relationError) return `关联标签失败：${relationError.message}`;
+  const keep: string[] = [];
+  if (names.length > 0) {
+    const { data, error } = await supabase.from("tags")
+      .upsert(names.map((name) => ({ name })), { onConflict: "name" }).select("id");
+    if (error) return `保存标签失败：${error.message}`;
+    keep.push(...data.map((tag) => tag.id));
+    const { error: linkError } = await supabase.from("entry_tags")
+      .upsert(keep.map((tagId) => ({ entry_id: entryId, tag_id: tagId })), {
+        onConflict: "entry_id,tag_id", ignoreDuplicates: true,
+      });
+    if (linkError) return `关联标签失败：${linkError.message}`;
   }
 
-  return null;
+  // 新关联写入后再清理旧项，失败时仍可以用同一份表单重试。
+  let remove = supabase.from("entry_tags").delete().eq("entry_id", entryId);
+  if (keep.length) remove = remove.not("tag_id", "in", `(${keep.join(",")})`);
+  const { error } = await remove;
+  return error ? `更新标签失败：${error.message}` : null;
+}
+
+function entryColumns(entry: z.infer<typeof entrySchema>) {
+  return {
+    title: entry.title,
+    slug: entry.slug,
+    kind: entry.kind,
+    occurred_at: entry.occurredAt,
+    excerpt: entry.excerpt,
+    content_markdown: entry.content,
+    cover_url: entry.coverUrl,
+    location: entry.location,
+    mood: entry.mood,
+    status: entry.status,
+    visibility: entry.visibility,
+    is_pinned: entry.isPinned,
+  };
 }
 
 export async function createEntry(
   _previousState: EntryActionState,
   formData: FormData,
 ): Promise<EntryActionState> {
+  if (_previousState.createdId) {
+    formData.set("id", _previousState.createdId);
+    const state = await updateEntry(_previousState, formData);
+    return { ...state, createdId: _previousState.createdId };
+  }
   const { supabase, claims } = await requireOwner();
   const parsed = parseEntry(formData);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "请检查填写内容。" };
@@ -116,18 +154,7 @@ export async function createEntry(
   const { data, error } = await supabase
     .from("entries")
     .insert({
-      title: entry.title,
-      slug: entry.slug,
-      kind: entry.kind,
-      occurred_at: entry.occurredAt,
-      excerpt: entry.excerpt,
-      content_markdown: entry.content,
-      cover_url: entry.coverUrl,
-      location: entry.location,
-      mood: entry.mood,
-      status: entry.status,
-      visibility: entry.visibility,
-      is_pinned: entry.isPinned,
+      ...entryColumns(entry),
       owner_id: claims?.sub,
       published_at: entry.status === "published" ? now : null,
     })
@@ -140,10 +167,8 @@ export async function createEntry(
     };
   }
   const tagError = await replaceEntryTags(supabase, data.id, entry.tags);
-  if (tagError) return { error: tagError };
-
-  revalidatePath("/");
-  revalidatePath("/tags");
+  refreshEntryPages();
+  if (tagError) return { error: `正文已创建。${tagError}，请再次保存。`, createdId: data.id };
   redirect(`/studio/entries/${data.id}?created=1`);
 }
 
@@ -167,18 +192,7 @@ export async function updateEntry(
   const { error } = await supabase
     .from("entries")
     .update({
-      title: entry.title,
-      slug: entry.slug,
-      kind: entry.kind,
-      occurred_at: entry.occurredAt,
-      excerpt: entry.excerpt,
-      content_markdown: entry.content,
-      cover_url: entry.coverUrl,
-      location: entry.location,
-      mood: entry.mood,
-      status: entry.status,
-      visibility: entry.visibility,
-      is_pinned: entry.isPinned,
+      ...entryColumns(entry),
       published_at:
         entry.status === "published"
           ? existing.published_at ?? new Date().toISOString()
@@ -192,12 +206,8 @@ export async function updateEntry(
     };
   }
   const tagError = await replaceEntryTags(supabase, id, entry.tags);
-  if (tagError) return { error: tagError };
-
-  revalidatePath("/");
-  revalidatePath("/tags");
-  revalidatePath(`/posts/${entry.slug}`);
-  revalidatePath("/studio");
+  refreshEntryPages();
+  if (tagError) return { error: `正文已保存。${tagError}，请再次保存。` };
   redirect(`/studio/entries/${id}?saved=1`);
 }
 
@@ -210,8 +220,7 @@ export async function moveEntryToTrash(formData: FormData) {
     .eq("id", id);
   if (error) throw new Error(`移入回收站失败：${error.message}`);
 
-  revalidatePath("/");
-  revalidatePath("/studio");
+  refreshEntryPages();
   redirect("/studio");
 }
 
@@ -221,9 +230,7 @@ export async function restoreEntry(formData: FormData) {
   const { error } = await supabase.from("entries").update({ deleted_at: null }).eq("id", id);
   if (error) throw new Error(`恢复记录失败：${error.message}`);
 
-  revalidatePath("/");
-  revalidatePath("/studio");
-  revalidatePath("/studio/trash");
+  refreshEntryPages();
 }
 
 export async function permanentlyDeleteEntry(formData: FormData) {
@@ -236,9 +243,7 @@ export async function permanentlyDeleteEntry(formData: FormData) {
     .not("deleted_at", "is", null);
   if (error) throw new Error(`永久删除失败：${error.message}`);
 
-  revalidatePath("/");
-  revalidatePath("/studio");
-  revalidatePath("/studio/trash");
+  refreshEntryPages();
 }
 
 export async function deleteMedia(formData: FormData) {
@@ -260,8 +265,7 @@ export async function deleteMedia(formData: FormData) {
   const { error: rowError } = await supabase.from("media").delete().eq("id", id);
   if (rowError) throw new Error(`删除文件记录失败：${rowError.message}`);
 
-  revalidatePath("/gallery");
-  revalidatePath("/studio/media");
+  refreshMediaPages();
 }
 
 export async function setMediaPurpose(formData: FormData) {
@@ -279,8 +283,7 @@ export async function setMediaPurpose(formData: FormData) {
     .eq("id", id);
   if (error) throw new Error(`更新文件用途失败：${error.message}`);
 
-  revalidatePath("/gallery");
-  revalidatePath("/studio/media");
+  refreshMediaPages();
 }
 
 export async function updateSiteSettings(formData: FormData) {
@@ -345,11 +348,9 @@ export async function restoreEntryRevision(formData: FormData) {
     .eq("id", entryId);
   if (restoreError) throw new Error(`恢复历史版本失败：${restoreError.message}`);
 
-  const tagError = await replaceEntryTags(supabase, entryId, snapshot.tags.join("，"));
+  const tagError = await replaceEntryTags(supabase, entryId, snapshot.tags);
+  refreshEntryPages();
   if (tagError) throw new Error(tagError);
-
-  revalidatePath("/", "layout");
-  revalidatePath("/studio");
   redirect(`/studio/entries/${entryId}?restored=1`);
 }
 
@@ -374,8 +375,7 @@ export async function updateMediaDetails(formData: FormData) {
     .eq("id", id);
   if (error) throw new Error(`保存照片信息失败：${error.message}`);
 
-  revalidatePath("/gallery");
-  revalidatePath("/studio/media");
+  refreshMediaPages();
 }
 
 export async function signOut() {

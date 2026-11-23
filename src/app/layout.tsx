@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import SiteShell from "@/components/SiteShell";
 import { getSiteSettings } from "@/lib/settings";
 import "./globals.css";
+import "./reading.css";
 
 // 网站正式网址（Vercel 部署时自动填入；本地为 localhost）
 const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL

@@ -11,17 +11,12 @@ export default function StudioLoginPage() {
         <Link href="/" className="text-sm text-muted transition-colors hover:text-ink">
           ← 返回公开网站
         </Link>
-        <span className="text-xs text-muted">管理入口</span>
       </div>
       <div className="studio-card p-7 sm:p-9">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent font-serif text-xl font-bold text-white">
+        <div className="studio-brand-mark" aria-hidden="true">
           记
         </div>
-        <div className="mt-6 text-xs font-semibold uppercase tracking-[0.2em] text-accent">Personal Studio</div>
-        <h1 className="mt-2 font-serif text-3xl font-bold">欢迎回来</h1>
-        <p className="mt-3 text-sm leading-7 text-muted">
-          登录后继续整理你的记录、照片和影像。这里不提供公开注册。
-        </p>
+        <h1 className="mt-5 font-serif text-3xl font-bold">登录工作台</h1>
         <Suspense
           fallback={
             <div className="mt-8 h-48 animate-pulse rounded-xl bg-stone-100" aria-label="正在准备登录表单" />

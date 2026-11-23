@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -34,12 +33,12 @@ export default function LoginForm() {
 
     const requestedPath = searchParams.get("next") ?? "/studio";
     const destination = requestedPath.startsWith("/studio") ? requestedPath : "/studio";
-    router.replace(destination);
-    router.refresh();
+    // 登录后用刚写入的 cookie 请求工作台，丢弃访客状态的路由预取结果。
+    window.location.replace(destination);
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+    <form method="post" onSubmit={handleSubmit} className="mt-8 space-y-5">
       <div>
         <label htmlFor="email" className="studio-label">
           后台邮箱

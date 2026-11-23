@@ -50,11 +50,9 @@ export default async function EntryHistoryPage({ params }: { params: Promise<{ i
         <Link href={`/studio/entries/${id}`} className="text-sm text-muted transition-colors hover:text-ink">
           ← 返回编辑
         </Link>
-        <div className="mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-accent">Version history</div>
-        <h1 className="mt-1 font-serif text-3xl font-bold">历史版本</h1>
-        <p className="mt-2 text-sm leading-6 text-muted">
-          {entry.title} · 每次保存修改前，旧内容都会自动留在这里。恢复也可以反悔，因为当前内容会先保存成新版本。
-        </p>
+        <div className="studio-page-heading mt-4"><h1>历史版本</h1></div>
+        <p className="text-sm leading-6 text-muted">{entry.title}</p>
+        <p className="mt-1 text-xs leading-6 text-muted">恢复版本时，当前内容也会存入历史。</p>
       </div>
 
       {!revisions || revisions.length === 0 ? (
