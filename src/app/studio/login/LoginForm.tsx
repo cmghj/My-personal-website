@@ -3,9 +3,13 @@
 import { useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useNavigationNotice } from "../FeedbackForm";
 
 export default function LoginForm() {
   const searchParams = useSearchParams();
+  const logoutNotice = useNavigationNotice(searchParams.get("logout") === "local"
+    ? "此浏览器已退出。其他设备的登录状态暂未确认。"
+    : undefined);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -41,6 +45,7 @@ export default function LoginForm() {
 
   return (
     <form method="post" onSubmit={handleSubmit} className="mt-8 space-y-5">
+      {logoutNotice && <p role="status" className="rounded-lg border border-line bg-paper px-4 py-3 text-sm">{logoutNotice}</p>}
       <div>
         <label htmlFor="email" className="studio-label">
           后台邮箱

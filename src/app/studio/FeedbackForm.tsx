@@ -12,7 +12,7 @@ export function useNavigationNotice(message?: string) {
   useEffect(() => {
     if (!message) return;
     const url = new URL(window.location.href);
-    for (const key of ["created", "saved", "restored", "trashed"]) url.searchParams.delete(key);
+    for (const key of ["created", "saved", "restored", "trashed", "logout"]) url.searchParams.delete(key);
     if (url.search !== window.location.search) window.history.replaceState(null, "", url);
   }, [message]);
   return notice;

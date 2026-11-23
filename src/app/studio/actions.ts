@@ -399,6 +399,11 @@ export async function updateMediaDetails(formData: FormData): Promise<ActionFeed
 export async function signOut(): Promise<ActionFeedback> {
   const { supabase } = await requireOwner();
   const { error } = await supabase.auth.signOut();
-  if (error) return { ok: false, message: "退出失败，请重试。" };
+  if (error) {
+    // Supabase 清理本机登录后，远端的全局退出仍可能返回错误。
+    const { data } = await supabase.auth.getSession();
+    if (data.session) return { ok: false, message: "退出失败，请重试。" };
+    redirect("/studio/login?logout=local");
+  }
   redirect("/studio/login");
 }
