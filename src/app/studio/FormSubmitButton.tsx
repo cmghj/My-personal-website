@@ -14,11 +14,12 @@ export default function FormSubmitButton({
   disabled,
   ...props
 }: FormSubmitButtonProps) {
-  const { pending } = useFormStatus();
+  const { pending, data } = useFormStatus();
+  const active = pending && (!props.name || (data?.get(props.name) ?? "") === props.value);
 
   return (
     <button type="submit" disabled={disabled || pending} {...props}>
-      {pending ? pendingLabel : idleLabel}
+      {active ? pendingLabel : idleLabel}
     </button>
   );
 }

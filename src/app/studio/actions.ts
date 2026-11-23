@@ -51,7 +51,14 @@ const revisionSnapshotSchema = z.object({
   tags: z.array(z.string()).default([]),
 });
 
-export type EntryActionState = { error: string; createdId?: string };
+export type EntryActionState = { error: string; message?: string; createdId?: string };
+export type ActionFeedback = { ok: boolean; message: string };
+
+function writeFailure(operation: string, error: { code?: string }): ActionFeedback {
+  return { ok: false, message: error.code === "PGRST116"
+    ? "这条数据已不存在或无法访问，请刷新页面查看。"
+    : `${operation}失败，请重试。` };
+}
 
 function value(formData: FormData, name: string) {
   return String(formData.get(name) ?? "");
@@ -143,6 +150,7 @@ export async function createEntry(
   if (_previousState.createdId) {
     formData.set("id", _previousState.createdId);
     const state = await updateEntry(_previousState, formData);
+    if (!state.error) redirect(`/studio/entries/${_previousState.createdId}?created=1`);
     return { ...state, createdId: _previousState.createdId };
   }
   const { supabase, claims } = await requireOwner();
@@ -187,7 +195,7 @@ export async function updateEntry(
     .select("published_at")
     .eq("id", id)
     .single();
-  if (existingError) return { error: `读取记录失败：${existingError.message}` };
+  if (existingError) return { error: writeFailure("读取记录", existingError).message };
 
   const { error } = await supabase
     .from("entries")
@@ -198,55 +206,61 @@ export async function updateEntry(
           ? existing.published_at ?? new Date().toISOString()
           : existing.published_at,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .is("deleted_at", null)
+    .select("id").single();
 
   if (error) {
     return {
-      error: error.code === "23505" ? "这个文章网址已经被使用，请换一个网址名称。" : `保存记录失败：${error.message}`,
+      error: error.code === "23505" ? "这个文章网址已经被使用，请换一个网址名称。" : writeFailure("保存记录", error).message,
     };
   }
   const tagError = await replaceEntryTags(supabase, id, entry.tags);
   refreshEntryPages();
   if (tagError) return { error: `正文已保存。${tagError}，请再次保存。` };
-  redirect(`/studio/entries/${id}?saved=1`);
+  return { error: "", message: "修改已保存。" };
 }
 
-export async function moveEntryToTrash(formData: FormData) {
+export async function moveEntryToTrash(formData: FormData): Promise<ActionFeedback> {
   const { supabase } = await requireOwner();
   const id = value(formData, "id");
   const { error } = await supabase
     .from("entries")
     .update({ deleted_at: new Date().toISOString() })
-    .eq("id", id);
-  if (error) throw new Error(`移入回收站失败：${error.message}`);
+    .eq("id", id).is("deleted_at", null)
+    .select("id").single();
+  if (error) return writeFailure("移入回收站", error);
 
   refreshEntryPages();
-  redirect("/studio");
+  redirect("/studio?trashed=1");
 }
 
-export async function restoreEntry(formData: FormData) {
+export async function restoreEntry(formData: FormData): Promise<ActionFeedback> {
   const { supabase } = await requireOwner();
   const id = value(formData, "id");
-  const { error } = await supabase.from("entries").update({ deleted_at: null }).eq("id", id);
-  if (error) throw new Error(`恢复记录失败：${error.message}`);
+  const { error } = await supabase.from("entries").update({ deleted_at: null })
+    .eq("id", id).not("deleted_at", "is", null).select("id").single();
+  if (error) return writeFailure("恢复记录", error);
 
   refreshEntryPages();
+  return { ok: true, message: "记录已恢复，可在「我的记录」中查看。" };
 }
 
-export async function permanentlyDeleteEntry(formData: FormData) {
+export async function permanentlyDeleteEntry(formData: FormData): Promise<ActionFeedback> {
   const { supabase } = await requireOwner();
   const id = value(formData, "id");
   const { error } = await supabase
     .from("entries")
     .delete()
     .eq("id", id)
-    .not("deleted_at", "is", null);
-  if (error) throw new Error(`永久删除失败：${error.message}`);
+    .not("deleted_at", "is", null).select("id").single();
+  if (error) return writeFailure("永久删除", error);
 
   refreshEntryPages();
+  return { ok: true, message: "记录已永久删除。" };
 }
 
-export async function deleteMedia(formData: FormData) {
+export async function deleteMedia(formData: FormData): Promise<ActionFeedback> {
   const { supabase } = await requireOwner();
   const id = value(formData, "id");
 
@@ -255,45 +269,47 @@ export async function deleteMedia(formData: FormData) {
     .select("storage_path")
     .eq("id", id)
     .single();
-  if (readError) throw new Error(`读取文件失败：${readError.message}`);
+  if (readError) return writeFailure("读取文件", readError);
 
   const { error: storageError } = await supabase.storage
     .from("public-media")
     .remove([media.storage_path]);
-  if (storageError) throw new Error(`删除存储文件失败：${storageError.message}`);
+  if (storageError) return { ok: false, message: "删除存储文件失败，请重试。" };
 
-  const { error: rowError } = await supabase.from("media").delete().eq("id", id);
-  if (rowError) throw new Error(`删除文件记录失败：${rowError.message}`);
+  const { error: rowError } = await supabase.from("media").delete().eq("id", id).select("id").single();
+  if (rowError) return { ok: false, message: "文件已从存储删除，但未能确认媒体库记录已清除。请刷新媒体库，若记录仍在，可再次删除。" };
 
   refreshMediaPages();
+  return { ok: true, message: "文件已从媒体库删除。" };
 }
 
-export async function setMediaPurpose(formData: FormData) {
+export async function setMediaPurpose(formData: FormData): Promise<ActionFeedback> {
   const { supabase } = await requireOwner();
   const id = value(formData, "id");
   const purpose = value(formData, "purpose");
 
   if (purpose !== "gallery" && purpose !== "article") {
-    throw new Error("文件用途不正确。");
+    return { ok: false, message: "文件用途不正确，请刷新后重试。" };
   }
 
   const { error } = await supabase
     .from("media")
     .update({ purpose })
-    .eq("id", id);
-  if (error) throw new Error(`更新文件用途失败：${error.message}`);
+    .eq("id", id).select("id").single();
+  if (error) return writeFailure("更改相册状态", error);
 
   refreshMediaPages();
+  return { ok: true, message: purpose === "gallery" ? "已加入公开相册。" : "已移出公开相册，文件仍在媒体库中。" };
 }
 
-export async function updateSiteSettings(formData: FormData) {
+export async function updateSiteSettings(formData: FormData): Promise<ActionFeedback> {
   const { supabase, claims } = await requireOwner();
   const parsed = settingsSchema.safeParse({
     siteTitle: value(formData, "siteTitle"),
     siteDescription: value(formData, "siteDescription"),
     homeIntro: value(formData, "homeIntro"),
   });
-  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "请检查网站设置。");
+  if (!parsed.success) return { ok: false, message: parsed.error.issues[0]?.message ?? "请检查网站设置。" };
 
   const { error } = await supabase
     .from("site_settings")
@@ -303,18 +319,18 @@ export async function updateSiteSettings(formData: FormData) {
       home_intro: parsed.data.homeIntro,
       updated_by: claims?.sub,
     })
-    .eq("id", true);
-  if (error) throw new Error(`保存网站设置失败：${error.message}`);
+    .eq("id", true).select("id").single();
+  if (error) return writeFailure("保存网站设置", error);
 
   revalidatePath("/", "layout");
-  redirect("/studio/settings?saved=1");
+  return { ok: true, message: "网站设置已保存。" };
 }
 
-export async function restoreEntryRevision(formData: FormData) {
+export async function restoreEntryRevision(formData: FormData): Promise<ActionFeedback> {
   const { supabase } = await requireOwner();
   const entryId = value(formData, "entryId");
   const revisionId = Number(value(formData, "revisionId"));
-  if (!entryId || !Number.isInteger(revisionId)) throw new Error("历史版本参数不正确。");
+  if (!entryId || !Number.isInteger(revisionId)) return { ok: false, message: "历史版本参数不正确。" };
 
   const { data, error: readError } = await supabase
     .from("entry_revisions")
@@ -322,10 +338,10 @@ export async function restoreEntryRevision(formData: FormData) {
     .eq("id", revisionId)
     .eq("entry_id", entryId)
     .single();
-  if (readError) throw new Error(`读取历史版本失败：${readError.message}`);
+  if (readError) return writeFailure("读取历史版本", readError);
 
   const parsed = revisionSnapshotSchema.safeParse(data.snapshot);
-  if (!parsed.success) throw new Error("这个历史版本的数据格式已经无法识别。");
+  if (!parsed.success) return { ok: false, message: "无法识别这个历史版本的数据格式。" };
   const snapshot = parsed.data;
 
   const { error: restoreError } = await supabase
@@ -345,25 +361,26 @@ export async function restoreEntryRevision(formData: FormData) {
       is_pinned: snapshot.is_pinned,
       published_at: snapshot.published_at,
     })
-    .eq("id", entryId);
-  if (restoreError) throw new Error(`恢复历史版本失败：${restoreError.message}`);
+    .eq("id", entryId).is("deleted_at", null).select("id").single();
+  if (restoreError) return writeFailure("恢复历史版本", restoreError);
 
   const tagError = await replaceEntryTags(supabase, entryId, snapshot.tags);
   refreshEntryPages();
-  if (tagError) throw new Error(tagError);
+  if (tagError) return { ok: false, message: `正文已恢复。${tagError}，请重试。` };
   redirect(`/studio/entries/${entryId}?restored=1`);
 }
 
-export async function updateMediaDetails(formData: FormData) {
+export async function updateMediaDetails(formData: FormData): Promise<ActionFeedback> {
   const { supabase } = await requireOwner();
   const id = value(formData, "id");
-  const caption = value(formData, "caption").trim().slice(0, 500);
-  const location = value(formData, "location").trim().slice(0, 200);
+  const caption = value(formData, "caption").trim();
+  const location = value(formData, "location").trim();
   const capturedAt = value(formData, "capturedAt");
 
-  if (capturedAt && !/^\d{4}-\d{2}-\d{2}$/.test(capturedAt)) {
-    throw new Error("拍摄日期格式不正确。");
-  }
+  if (capturedAt && !z.iso.date().safeParse(capturedAt).success)
+    return { ok: false, message: "请填写有效的拍摄日期。" };
+  if (caption.length > 500 || location.length > 200)
+    return { ok: false, message: "照片说明最多 500 字，地点最多 200 字。" };
 
   const { error } = await supabase
     .from("media")
@@ -372,14 +389,16 @@ export async function updateMediaDetails(formData: FormData) {
       location,
       captured_at: capturedAt || null,
     })
-    .eq("id", id);
-  if (error) throw new Error(`保存照片信息失败：${error.message}`);
+    .eq("id", id).select("id").single();
+  if (error) return writeFailure("保存拍摄信息", error);
 
   refreshMediaPages();
+  return { ok: true, message: "拍摄信息已保存。" };
 }
 
-export async function signOut() {
+export async function signOut(): Promise<ActionFeedback> {
   const { supabase } = await requireOwner();
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
+  if (error) return { ok: false, message: "退出失败，请重试。" };
   redirect("/studio/login");
 }

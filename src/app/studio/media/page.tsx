@@ -1,10 +1,9 @@
 import CopyUrlButton from "./CopyUrlButton";
-import DeleteMediaButton from "./DeleteMediaButton";
 import MediaUploader from "./MediaUploader";
 import SupabaseImage from "@/components/SupabaseImage";
-import { setMediaPurpose, updateMediaDetails } from "@/app/studio/actions";
+import { deleteMedia, setMediaPurpose, updateMediaDetails } from "@/app/studio/actions";
 import { requireOwner } from "@/lib/studio";
-import FormSubmitButton from "../FormSubmitButton";
+import FeedbackForm from "../FeedbackForm";
 
 export const metadata = { title: "照片与视频" };
 
@@ -66,26 +65,33 @@ export default async function StudioMediaPage() {
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-1">
                   <CopyUrlButton url={item.public_url} />
-                  <form action={setMediaPurpose}>
+                  <FeedbackForm action={setMediaPurpose} pageNotice
+                    label={item.purpose === "gallery" ? "移出相册" : "加入相册"}
+                    pendingLabel="处理中…"
+                    buttonClassName="rounded-lg px-2.5 py-2 text-xs text-accent transition-colors hover:bg-paper hover:text-accent-strong"
+                  >
                     <input type="hidden" name="id" value={item.id} />
                     <input
                       type="hidden"
                       name="purpose"
                       value={item.purpose === "gallery" ? "article" : "gallery"}
                     />
-                    <FormSubmitButton
-                      idleLabel={item.purpose === "gallery" ? "移出相册" : "加入相册"}
-                      pendingLabel="处理中…"
-                      className="rounded-lg px-2.5 py-2 text-xs text-accent transition-colors hover:bg-paper hover:text-accent-strong"
-                    />
-                  </form>
-                  <DeleteMediaButton id={item.id} name={item.original_name} />
+                  </FeedbackForm>
+                  <FeedbackForm action={deleteMedia} pageNotice label="删除" pendingLabel="删除中…"
+                    buttonClassName="rounded-lg px-2.5 py-2 text-xs text-red-600 hover:bg-red-50"
+                    confirmMessage={`确定永久删除“${item.original_name}”吗？使用它的文章封面和正文也会失去这个文件。`}
+                  >
+                    <input type="hidden" name="id" value={item.id} />
+                  </FeedbackForm>
                 </div>
                 <details className="mt-3 border-t border-line pt-3">
                   <summary className="cursor-pointer text-xs font-medium text-accent hover:text-accent-strong">
                     编辑拍摄信息
                   </summary>
-                  <form action={updateMediaDetails} className="mt-3 space-y-3">
+                  <FeedbackForm action={updateMediaDetails} className="mt-3 space-y-3"
+                    label="保存拍摄信息" pendingLabel="正在保存…"
+                    buttonClassName="studio-secondary-button w-full justify-center !py-2"
+                  >
                     <input type="hidden" name="id" value={item.id} />
                     <div>
                       <label htmlFor={`capturedAt-${item.id}`} className="studio-label">拍摄日期</label>
@@ -102,6 +108,7 @@ export default async function StudioMediaPage() {
                       <input
                         id={`location-${item.id}`}
                         name="location"
+                        maxLength={200}
                         defaultValue={item.location}
                         className="studio-input !py-2 text-sm"
                         placeholder="例如：杭州"
@@ -112,18 +119,14 @@ export default async function StudioMediaPage() {
                       <textarea
                         id={`caption-${item.id}`}
                         name="caption"
+                        maxLength={500}
                         defaultValue={item.caption}
                         rows={2}
                         className="studio-input resize-y !py-2 text-sm"
                         placeholder="这一刻发生了什么？"
                       />
                     </div>
-                    <FormSubmitButton
-                      idleLabel="保存拍摄信息"
-                      pendingLabel="正在保存…"
-                      className="studio-secondary-button w-full justify-center !py-2"
-                    />
-                  </form>
+                  </FeedbackForm>
                 </details>
               </div>
             </article>

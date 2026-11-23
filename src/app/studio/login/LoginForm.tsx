@@ -18,15 +18,17 @@ export default function LoginForm() {
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
-    const supabase = createClient();
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (signInError) {
-      setError("邮箱或密码不正确，请重试。");
+    try {
+      const { error: signInError } = await createClient().auth.signInWithPassword({ email, password });
+      if (signInError) {
+        setError(signInError.code === "invalid_credentials" || signInError.message === "Invalid login credentials"
+          ? "邮箱或密码不正确，请重试。"
+          : "暂时无法登录，请稍后重试。");
+        setLoading(false);
+        return;
+      }
+    } catch {
+      setError("暂时无法连接登录服务，请检查网络后重试。");
       setLoading(false);
       return;
     }

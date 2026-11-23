@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatDate } from "@/lib/posts";
 import { requireOwner } from "@/lib/studio";
+import { NavigationFeedback } from "./FeedbackForm";
 
 export const metadata = { title: "工作台" };
 
@@ -19,9 +20,9 @@ function getMode(entry: { status: string; visibility: string }): keyof typeof mo
 }
 
 export default async function StudioPage({ searchParams }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; trashed?: string }>;
 }) {
-  const [{ supabase }, { view }] = await Promise.all([requireOwner(), searchParams]);
+  const [{ supabase }, { view, trashed }] = await Promise.all([requireOwner(), searchParams]);
   const { data, error } = await supabase
     .from("entries")
     .select("id,title,occurred_at,status,visibility,updated_at,deleted_at")
@@ -45,6 +46,7 @@ export default async function StudioPage({ searchParams }: {
           <span aria-hidden="true">＋</span> 新建记录
         </Link>
       </div>
+      {trashed === "1" && <NavigationFeedback message="记录已移入回收站，可以在回收站中恢复。" />}
       <nav className="studio-filters" aria-label="筛选记录">
         {filters.map(([key, label]) => (
           <Link key={key} href={key === "all" ? "/studio" : `/studio?view=${key}`}

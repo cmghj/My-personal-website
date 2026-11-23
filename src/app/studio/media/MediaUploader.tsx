@@ -94,7 +94,9 @@ export default function MediaUploader() {
           <button type="button" className="studio-secondary-button" disabled={uploading} onClick={() => { pending.current = []; setRemaining(0); setError(""); setMessage(""); }}>取消剩余上传</button>
         </div>
       )}
-      {message && <p role="status" className="text-sm text-emerald-700">✓ {message}</p>}
+      {message && <p role="status" className={uploading ? "text-sm text-muted" : "text-sm text-emerald-700"}>
+        {message}
+      </p>}
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
     </div>
   );

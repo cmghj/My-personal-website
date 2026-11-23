@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import {
   useActionState,
   useEffect,
@@ -10,8 +11,9 @@ import {
   type KeyboardEvent,
 } from "react";
 import EntryPreview from "./EntryPreview";
-import { createEntry, moveEntryToTrash, updateEntry } from "@/app/studio/actions";
+import { createEntry, moveEntryToTrash, updateEntry, type EntryActionState } from "@/app/studio/actions";
 import FormSubmitButton from "@/app/studio/FormSubmitButton";
+import { FeedbackMessage, useNavigationNotice } from "@/app/studio/FeedbackForm";
 import SupabaseImage from "@/components/SupabaseImage";
 import { openMediaUpload, prepareMediaUpload, uploadMedia, type MediaUpload } from "@/lib/upload-media";
 
@@ -100,7 +102,27 @@ export default function EntryForm({
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const mediaInputRef = useRef<HTMLInputElement>(null);
   const pickerRef = useRef<HTMLDialogElement>(null);
-  const [state, formAction] = useActionState(editing ? updateEntry : createEntry, { error: "" });
+  const edits = useRef(0);
+  const [showFeedback, setShowFeedback] = useState(true);
+  const [state, formAction, pending] = useActionState(async (previous: EntryActionState, data: FormData) => {
+    const submittedEdits = edits.current;
+    let result: EntryActionState;
+    try {
+      if (data.get("intent") === "trash") {
+        const failure = await moveEntryToTrash(data);
+        result = { ...previous, error: failure.message };
+      } else {
+        result = await (editing ? updateEntry : createEntry)(previous, data);
+      }
+    } catch (error) {
+      unstable_rethrow(error);
+      result = { ...previous, error: "暂时无法确认操作结果，请检查网络后重试。" };
+    }
+    setShowFeedback(Boolean(result.error) || submittedEdits === edits.current);
+    return result;
+  }, { error: "" });
+  const initialNotice = useNavigationNotice(notice);
+  const message = state.error || state.message || initialNotice;
   const storedPublishValues = getStoredPublishValues(publishMode);
   const saveLabel = editing && publishMode === getInitialPublishMode(entry)
     ? "保存修改"
@@ -110,7 +132,13 @@ export default function EntryForm({
     if (pickerMode && !pickerRef.current?.open) pickerRef.current?.showModal();
   }, [pickerMode]);
 
+  function markEdited() {
+    edits.current++;
+    setShowFeedback(false);
+  }
+
   function chooseMedia(item: EditorMedia, target: Exclude<PickerMode, null>) {
+    markEdited();
     if (target === "cover") {
       setCoverUrl(item.url);
       setMediaNotice("已选为封面。");
@@ -173,12 +201,12 @@ export default function EntryForm({
   function saveWithShortcut(event: KeyboardEvent<HTMLTextAreaElement>) {
     if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
       event.preventDefault();
-      event.currentTarget.form?.requestSubmit();
+      if (!pending) event.currentTarget.form?.requestSubmit();
     }
   }
 
   return (
-    <form action={formAction} className="studio-editor" onReset={(event) => event.preventDefault()}>
+    <form action={formAction} className="studio-editor" onReset={(event) => event.preventDefault()} onChange={markEdited}>
       {entry.id && <input type="hidden" name="id" value={entry.id} />}
       <input type="hidden" name="status" value={storedPublishValues.status} />
       <input type="hidden" name="visibility" value={storedPublishValues.visibility} />
@@ -190,21 +218,10 @@ export default function EntryForm({
         </div>
         <div className="studio-editor-actions">
           <EntryPreview />
-          <FormSubmitButton idleLabel={saveLabel} pendingLabel="保存中…" className="studio-primary-button" />
+          <FormSubmitButton name="intent" value="" idleLabel={saveLabel} pendingLabel="保存中…" className="studio-primary-button" />
         </div>
+        {!pending && showFeedback && message && <FeedbackMessage feedback={{ ok: !state.error, message }} />}
       </div>
-
-      {notice && (
-        <div role="status" className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-800">
-          ✓ {notice}
-        </div>
-      )}
-
-      {state.error && (
-        <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-800">
-          {state.error}
-        </div>
-      )}
 
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">
         <section className="studio-card studio-writing">
@@ -369,7 +386,7 @@ export default function EntryForm({
                 {coverUrl && (
                   <button
                     type="button"
-                    onClick={() => setCoverUrl("")}
+                    onClick={() => { setCoverUrl(""); markEdited(); }}
                     className="mt-2 w-full text-center text-xs text-red-600 hover:text-red-700"
                   >
                     移除封面
@@ -420,7 +437,8 @@ export default function EntryForm({
               <FormSubmitButton
                 idleLabel="移入回收站"
                 pendingLabel="正在移动…"
-                formAction={moveEntryToTrash}
+                name="intent"
+                value="trash"
                 formNoValidate
                 onClick={(event) => {
                   if (!window.confirm("要把这条记录移入回收站吗？公开页面将不再显示它。")) event.preventDefault();
