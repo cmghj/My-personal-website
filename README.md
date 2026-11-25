@@ -1,70 +1,59 @@
 # 我的记录
 
-一个公开浏览、单人管理的个人生活档案网站。
+一个用 Next.js、React、TypeScript 和 Tailwind CSS 写的个人网站。访客可以读文章、翻相册、按标签找记录。站主在工作台写作、预览、发布和管理媒体。[正式网站](https://liaopan.vercel.app/) · [站主工作台](https://liaopan.vercel.app/studio)
 
-- 访客直接浏览首页、文章、相册和标签，不需要账号。
-- 只有站主进入 `/studio` 登录，写记录、上传媒体和修改网站设置。
-- Vercel 运行网页，Supabase 保存账号、文字数据、照片与视频。
-- 你上传的照片和视频统一保存在 Supabase Storage；仓库不作为个人媒体库。
-- 仓库中的图标与默认分享图是网站界面素材，不是个人记录附件。
+## 换电脑继续开发
 
-## 日常使用
+**1. 拉取代码并安装依赖。** 安装 Git 和 Node.js 24.x（本地开发版本见 `.nvmrc`），然后在终端运行下面三条命令。
 
-打开 `/studio` 后可以：
+```sh
+git clone https://github.com/cmghj/My-personal-website.git
+cd My-personal-website
+npm ci
+```
 
-- 在「记录」中新建、修改、发布、归档或移入回收站；
-- 在新建和编辑页点「预览」，用当前标题、封面和正文查看发布效果，返回后可以继续写。
-- 编辑记录时可以插入图片或视频、设置封面，也可以查看或恢复历史版本。
-- 在「媒体库」上传文件，填写拍摄日期、地点和说明；
-- 在「网站设置」修改网站名称、简介和首页开场白。
+`npm ci` 按仓库里的 `package-lock.json` 安装依赖。[npm ci 文档](https://docs.npmjs.com/cli/v11/commands/npm-ci/)
 
-媒体库上传的文件默认进入公开相册；文章编辑器内上传的文件默认只作为文章素材，不出现在相册列表。两种文件都位于公开的 `public-media` 存储桶，所以“文章素材”不是私人加密文件。
+**2. 连接现有 Supabase 项目。** 在仓库根目录把 `.env.example` 复制为 `.env.local`。在 Windows PowerShell 中运行下面的命令。
 
-## 本地运行
+```powershell
+Copy-Item .env.example .env.local
+```
 
-复制 `.env.example` 为 `.env.local`，填入 Supabase 项目 URL 与 Publishable Key，然后运行：
+macOS 或 Linux 可以运行 `cp .env.example .env.local`。打开你网站所用 Supabase 项目的 **Connect**，选择 Next.js，将下面两个值填入 `.env.local`。[Supabase 项目地址与 API 密钥](https://supabase.com/docs/guides/getting-started/api-keys)
 
-```bash
-npm install
+| 变量 | 填什么 |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Project URL，形如 `https://项目编号.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable key，形如 `sb_publishable_…` |
+
+文章、照片和站主账号都在 Supabase。连接同一个项目，本地工作台和正式网站读写同一份内容，可以继续使用原来的站主账号。换电脑只需配置连接，数据库已经就绪。
+
+**3. 启动网站。**
+
+```sh
 npm run dev
 ```
 
-浏览器打开 [http://localhost:3000](http://localhost:3000)。
+浏览器打开 [本地首页](http://localhost:3000) 或 [本地工作台](http://localhost:3000/studio)。
 
-## 部署
+## 日常维护与发布
 
-GitHub 仓库连接 Vercel 后，在 Vercel 项目中配置同样的两个环境变量：
+- **同步代码**　已有本地仓库时，在 `main` 上运行 `git pull --ff-only`。拉取到新的锁文件后再运行 `npm ci`。
+- **升级依赖**　用 npm 安装目标版本，将 `package.json` 和 `package-lock.json` 的改动一起提交。
+- **提交前检查**　运行 `npm run lint` 和 `npm run build`。构建通过后，可用 `npm start` 在本地查看生产版本。
+- **发布**　把验证过的提交推送到 GitHub 的 `main`。已连接的 Vercel 项目 `my-personal-website` 会部署正式网站。部署使用 Vercel 上的环境变量，Git 只跟踪配置模板 `.env.example`。
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+## 从哪里改
 
-推送到 GitHub 后，Vercel 会自动构建和发布。
+| 目录 | 用途 |
+| --- | --- |
+| `src/app/` | 首页、文章、相册、标签、关于页，以及布局和样式 |
+| `src/app/studio/` | 站主后台。文章编辑和预览在 `entries/`，保存、发布等服务端操作在 `actions.ts` |
+| `src/components/` | 导航、相册查看器、文章正文等公用界面 |
+| `src/lib/` | Supabase 客户端、数据读写辅助函数、Markdown 排版和媒体上传 |
+| `src/proxy.ts` | 工作台请求的登录会话检查 |
+| `public/` | 默认分享图。站点图标按 Next.js 约定位于 `src/app/` |
+| `supabase/` | 数据库结构、访问规则与 SQL 脚本 |
 
-## 数据库
-
-- 当前 Supabase 项目已经完成数据库结构升级，不需要再次运行迁移。
-- 以后如果创建一个全新的空 Supabase 项目，只运行 `supabase/migrations/202609160001_initial_archive.sql`。
-- `202609170001_finalize_archive.sql` 是当前数据库从旧结构升级而来的正式历史记录，只在另一个仍处于旧结构的项目中运行一次。
-- 详细字段、数据流和后台查看位置见 `docs/database-structure.md`。
-
-迁移脚本是正式的数据库结构历史，不是临时开发文件。当前项目已经完成迁移，不需要再操作 SQL Editor。
-
-## 项目结构
-
-```text
-src/app/                 页面与工作台
-src/components/          公共界面组件
-src/lib/                 Supabase、记录、媒体与设置读取逻辑
-public/og-default.png    默认分享卡片图片
-supabase/migrations/     数据库初始结构与现有项目升级脚本
-docs/database-structure.md
-```
-
-旧演示图片已清理，项目不再保留本地 Markdown 内容副本或个人照片/视频副本；Supabase 是文章与媒体信息的唯一数据源，避免出现“改了文件却没改网页”或两份数据互相冲突。
-
-## 技术栈
-
-- Next.js 16 / React 19 / TypeScript
-- Tailwind CSS 4
-- Supabase PostgreSQL / Auth / Storage
-- Vercel
+需要查某个字段、初始化空数据库或升级表结构时，见 [Supabase 维护说明](supabase/README.md)。
